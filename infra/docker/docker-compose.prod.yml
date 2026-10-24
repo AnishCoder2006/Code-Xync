@@ -1,0 +1,57 @@
+# Production composition: API, sync, worker, AI service + Nginx.
+# Database = Supabase (external); this file has no postgres service.
+version: "3.9"
+
+services:
+  nginx:
+    image: nginx:alpine
+    restart: unless-stopped
+    ports:
+      - "80:80"
+    volumes:
+      - ./nginx.conf:/etc/nginx/nginx.conf:ro
+    depends_on:
+      - api
+      - sync
+
+  api:
+    build: ../../services/api
+    restart: unless-stopped
+    env_file: ../../.env
+    expose:
+      - "4000"
+
+  sync:
+    build: ../../services/sync
+    restart: unless-stopped
+    env_file: ../../.env
+    expose:
+      - "4001"
+
+  worker:
+    build: ../../services/worker
+    restart: unless-stopped
+    env_file: ../../.env
+    # Needs Docker socket access to spawn sandboxes — run on a separate VM in real prod (design doc 3.3)
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+
+  ai:
+    build: ../../services/ai
+    restart: unless-stopped
+    env_file: ../../.env
+    expose:
+      - "8000"
+
+  redis:
+    image: redis:7
+    restart: unless-stopped
+
+  qdrant:
+    image: qdrant/qdrant:latest
+    restart: unless-stopped
+    volumes:
+      - qdrantdata:/qdrant/storage
+
+volumes:
+  qdrantdata:

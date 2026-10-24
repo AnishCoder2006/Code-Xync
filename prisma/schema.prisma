@@ -1,0 +1,110 @@
+// CodeSync database schema — see design doc section 6.1
+// Hosted on Supabase (Postgres) in production; local Postgres (Docker) for dev/CI.
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider  = "postgresql"
+}
+
+enum RoomRole {
+  OWNER
+  EDITOR
+  VIEWER
+}
+
+enum UserRole {
+  ADMIN
+  DEV
+}
+
+model User {
+  id          String       @id @default(cuid())
+  email       String       @unique
+  name        String?
+  role        UserRole     @default(DEV)
+  createdAt   DateTime     @default(now())
+  memberships RoomMember[]
+  executions  ExecutionLog[]
+  aiRequests  AIInteraction[]
+}
+
+model Room {
+  id            String       @id @default(cuid())
+  title         String
+  passcodeHash  String?
+  ownerId       String
+  defaultLang   String       @default("javascript")
+  isPrivate     Boolean      @default(true)
+  createdAt     DateTime     @default(now())
+  members       RoomMember[]
+  files         ProjectFile[]
+  executions    ExecutionLog[]
+  aiRequests    AIInteraction[]
+  snapshots     CodeSnapshot[]
+}
+
+model RoomMember {
+  id        String    @id @default(cuid())
+  roomId    String
+  userId    String
+  role      RoomRole  @default(EDITOR)
+  joinedAt  DateTime  @default(now())
+  room      Room      @relation(fields: [roomId], references: [id])
+  user      User      @relation(fields: [userId], references: [id])
+
+  @@unique([roomId, userId])
+}
+
+model ProjectFile {
+  id         String    @id @default(cuid())
+  roomId     String
+  path       String
+  language   String
+  yjsState   Bytes?    // periodic Yjs state snapshot (section 2.2)
+  updatedAt  DateTime  @updatedAt
+  room       Room      @relation(fields: [roomId], references: [id])
+
+  @@unique([roomId, path])
+}
+
+model ExecutionLog {
+  id            String    @id @default(cuid())
+  roomId        String
+  userId        String
+  jobId         String    @unique
+  status        String    // queued | running | passed | failed | timeout | killed
+  stdoutTrunc   String?
+  stderrTrunc   String?
+  runTimeMs     Int?
+  createdAt     DateTime  @default(now())
+  room          Room      @relation(fields: [roomId], references: [id])
+  user          User      @relation(fields: [userId], references: [id])
+}
+
+model AIInteraction {
+  id            String    @id @default(cuid())
+  roomId        String
+  userId        String
+  prompt        String
+  baseVersion   String    // Yjs state vector recorded at request time (section 5.1 step 1)
+  status        String    // pending | verified | failed | stale | rejected
+  diffPatch     String?
+  tokensUsed    Int?
+  costUsd       Float?
+  createdAt     DateTime  @default(now())
+  room          Room      @relation(fields: [roomId], references: [id])
+  user          User      @relation(fields: [userId], references: [id])
+}
+
+model CodeSnapshot {
+  id            String    @id @default(cuid())
+  roomId        String
+  createdBy     String
+  snapshotHash  String
+  deltaState    Bytes?
+  createdAt     DateTime  @default(now())
+  room          Room      @relation(fields: [roomId], references: [id])
+}

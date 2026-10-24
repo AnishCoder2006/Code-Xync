@@ -1,0 +1,18 @@
+{
+  "name": "codesync",
+  "private": true,
+  "workspaces": [
+    "apps/web",
+    "services/api",
+    "services/sync",
+    "services/worker",
+    "tests/playwright"
+  ],
+  "scripts": {
+    "dev:infra": "docker compose -f infra/docker/docker-compose.yml up -d",
+    "db:migrate": "cd prisma && npx prisma migrate dev"
+  },
+  "devDependencies": {
+    "@prisma/config": "^7.10.0"
+  }
+}

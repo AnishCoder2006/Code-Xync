@@ -1,0 +1,10 @@
+fastapi>=0.112.0
+uvicorn[standard]>=0.30.0
+langgraph>=0.2.0
+langchain-core>=0.2.0
+qdrant-client>=1.10.0
+tree-sitter>=0.22.0
+tree-sitter-languages>=1.10.2
+redis>=5.0.0
+pydantic>=2.8.0
+python-dotenv>=1.0.1
