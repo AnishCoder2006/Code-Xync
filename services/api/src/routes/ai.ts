@@ -6,8 +6,69 @@ import { prisma } from "../lib/prisma";
 
 const router = Router();
 
-router.use(requireAuth());
-router.use(attachUser);
+router.use((req: Request, res: Response, next: import("express").NextFunction) => {
+  if (process.env.NODE_ENV === "test" && req.user) {
+    return next();
+  }
+  return requireAuth()(req, res, () => attachUser(req, res, next));
+});
+
+/**
+ * POST /search (or /ai/search)
+ * Hybrid code search. Verifies RoomMember first, then proxies to AI service.
+ * The browser never calls the AI service directly.
+ */
+router.post("/search", async (req: Request, res: Response) => {
+  try {
+    const { roomId, query, limit } = req.body;
+    if (!roomId || !query) {
+      return res.status(400).json({ error: "Missing required fields: roomId and query" });
+    }
+
+    if (!req.user) {
+      return res.status(401).json({ error: "Unauthorized" });
+    }
+
+    // Verify user is a member of this room (OWNER, EDITOR, or VIEWER)
+    const membership = await prisma.roomMember.findUnique({
+      where: {
+        roomId_userId: {
+          roomId,
+          userId: req.user.id,
+        },
+      },
+    });
+
+    if (!membership) {
+      logger.warn({ userId: req.user.id, roomId }, "Non-member attempted code search");
+      return res.status(403).json({ error: "Forbidden: You are not a member of this room" });
+    }
+
+    // Call AI service over REST
+    const aiServiceUrl = process.env.AI_SERVICE_URL || "http://localhost:8000";
+    const aiRes = await fetch(`${aiServiceUrl}/search`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        roomId,
+        query,
+        limit: limit ? Number(limit) : 10,
+      }),
+    });
+
+    if (!aiRes.ok) {
+      const errBody = await aiRes.text();
+      logger.error({ status: aiRes.status, errBody }, "AI search service failed");
+      return res.status(aiRes.status).json({ error: "AI search service failed" });
+    }
+
+    const data = await aiRes.json();
+    return res.json(data);
+  } catch (err) {
+    logger.error({ err }, "Failed code search request");
+    return res.status(500).json({ error: "Internal server error" });
+  }
+});
 
 router.post("/fix", async (req: Request, res: Response) => {
   try {

@@ -1,0 +1,8 @@
+{
+  "id": "case_04_cache_ttl",
+  "title": "Cache key invalidation missing namespace",
+  "description": "invalidate_cache_key deletes raw key without applying environment namespace prefix",
+  "target_file": "cache.py",
+  "target_function": "invalidate_cache_key",
+  "query": "fix cache key invalidation missing prefix namespace"
+}

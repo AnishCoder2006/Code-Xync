@@ -1,0 +1,8 @@
+{
+  "id": "case_02_jwt_auth",
+  "title": "Token expiry timestamp verification unit mismatch",
+  "description": "verify_token_expiry compares seconds against milliseconds without conversion",
+  "target_file": "auth.py",
+  "target_function": "verify_token_expiry",
+  "query": "fix JWT token expiry verification timestamp milliseconds comparison"
+}

@@ -6,4 +6,8 @@ export const SANDBOX_LIMITS = {
   timeoutMs: 5000,
   maxOutputBytes: 1_000_000,
   tmpfsSizeMb: 16,
+  user: "10001:10001",
+  securityOpt: "no-new-privileges",
+  capDrop: "ALL",
+  maxDbLogChars: 10240, // 10 KB for stdoutTrunc / stderrTrunc
 };

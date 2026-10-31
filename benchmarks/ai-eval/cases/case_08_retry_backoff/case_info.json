@@ -1,0 +1,8 @@
+{
+  "id": "case_08_retry_backoff",
+  "title": "Exponential backoff calculation overflow",
+  "description": "computeBackoffDelay does not cap exponent result before multiplying by base delay",
+  "target_file": "retry.ts",
+  "target_function": "computeBackoffDelay",
+  "query": "fix exponential retry backoff delay max limit cap overflow"
+}

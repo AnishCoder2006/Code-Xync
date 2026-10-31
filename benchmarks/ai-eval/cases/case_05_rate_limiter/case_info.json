@@ -1,0 +1,8 @@
+{
+  "id": "case_05_rate_limiter",
+  "title": "Rate limiter window expiry cleanup bug",
+  "description": "check_rate_limit filters out timestamps after current time instead of before window start",
+  "target_file": "rate_limiter.py",
+  "target_function": "check_rate_limit",
+  "query": "fix rate limiter sliding window timestamp expiry calculation"
+}

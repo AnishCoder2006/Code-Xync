@@ -15,6 +15,7 @@ app.get("/health", (_req, res) => res.json({ ok: true }));
 app.use("/rooms", roomsRouter);
 app.use("/execution", executionRouter);
 app.use("/ai", aiRouter);
+app.use("/search", aiRouter);
 
 const port = process.env.API_PORT ?? 4000;
 app.listen(port, () => logger.info(`API listening on :${port}`));

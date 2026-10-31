@@ -34,6 +34,12 @@ import * as decoding from "lib0/decoding";
 import Redis from "ioredis";
 import * as urlModule from "url";
 import { authenticateSocket } from "./socketAuth";
+import {
+  loadRoomPersistence,
+  saveRoomPersistence,
+  markRoomDirty,
+  startPeriodicPersistence,
+} from "./persistence";
 
 const port = Number(process.env.SYNC_PORT ?? 4001);
 
@@ -46,14 +52,27 @@ interface RoomState {
 
 const rooms = new Map<string, RoomState>();
 
-const getRoom = (roomId: string): RoomState => {
-  if (!rooms.has(roomId)) {
+const getRoom = async (roomId: string): Promise<RoomState> => {
+  let room = rooms.get(roomId);
+  if (!room) {
     const doc = new Y.Doc();
     const awareness = new awarenessProtocol.Awareness(doc);
-    rooms.set(roomId, { doc, awareness, clients: new Set() });
+    room = { doc, awareness, clients: new Set() };
+    rooms.set(roomId, room);
+
+    // Load Yjs document state from Postgres
+    await loadRoomPersistence(roomId, doc);
+
+    // Track dirty state and debounced idle indexing events on any doc updates
+    doc.on("update", () => {
+      markRoomDirty(roomId, doc);
+    });
   }
-  return rooms.get(roomId)!;
+  return room;
 };
+
+// Start 10s periodic persistence timer
+startPeriodicPersistence(rooms);
 
 const MESSAGE_SYNC = 0;
 const MESSAGE_AWARENESS = 1;
@@ -118,7 +137,7 @@ const controlledIds = new Map<WebSocket, Set<number>>();
 
 wss.on(
   "connection",
-  (ws: WebSocket, request: http.IncomingMessage, clientInfo: { userId: string; roomId: string }) => {
+  async (ws: WebSocket, request: http.IncomingMessage, clientInfo: { userId: string; roomId: string }) => {
     const { roomId } = clientInfo;
     const parsedUrl = urlModule.parse(request.url || "", true);
     const mode = parsedUrl.query.mode as string | undefined;
@@ -131,7 +150,7 @@ wss.on(
       }
 
       console.log(`[sync] Terminal client connected for room ${roomId}, job ${jobId}`);
-      const subscriber = new Redis(process.env.REDIS_URL || "redis://localhost:6379");
+      const subscriber = new Redis(process.env.REDIS_URL || "redis://localhost:6380");
       const channel = `room:${roomId}:execution:${jobId}`;
 
       subscriber.subscribe(channel, (err) => {
@@ -165,7 +184,7 @@ wss.on(
       return;
     }
 
-    const room = getRoom(roomId);
+    const room = await getRoom(roomId);
     room.clients.add(ws);
     console.log(`[sync] Client ${clientInfo.userId} joined room ${roomId} (${room.clients.size} connected)`);
 
@@ -234,12 +253,29 @@ wss.on(
       }
       controlledIds.delete(ws);
       if (room.clients.size === 0) {
-        // Keep doc in memory for fast reconnect; GC if needed later
-        console.log(`[sync] Room ${roomId} has no connected clients`);
+        console.log(`[sync] Room ${roomId} has no connected clients, persisting immediately.`);
+        saveRoomPersistence(roomId, room.doc).catch((err) => {
+          console.error(`[sync] Failed to persist room ${roomId} on last client leave:`, err);
+        });
       }
       console.log(`[sync] Client ${clientInfo.userId} left room ${roomId}`);
     });
   }
 );
 
+// Graceful shutdown: save all dirty rooms before exit
+const handleShutdown = async (signal: string) => {
+  console.log(`[sync] Received ${signal}. Saving all dirty rooms to Postgres...`);
+  for (const [roomId, room] of rooms.entries()) {
+    await saveRoomPersistence(roomId, room.doc).catch(() => {});
+  }
+  process.exit(0);
+};
+
+process.on("SIGTERM", () => handleShutdown("SIGTERM"));
+process.on("SIGINT", () => handleShutdown("SIGINT"));
+
 server.listen(port, () => console.log(`Sync service running on :${port}`));
+
+export { server, rooms, getRoom };
+

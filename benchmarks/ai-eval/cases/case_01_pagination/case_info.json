@@ -1,0 +1,8 @@
+{
+  "id": "case_01_pagination",
+  "title": "Off-by-one in pagination offset",
+  "description": "calculate_page_offset calculates offset incorrectly when page is 1 by subtracting 0 instead of 1",
+  "target_file": "pagination.py",
+  "target_function": "calculate_page_offset",
+  "query": "fix off by one page offset calculation in pagination"
+}

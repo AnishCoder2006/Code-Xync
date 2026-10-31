@@ -1,0 +1,8 @@
+{
+  "id": "case_03_tax_calc",
+  "title": "Tax rounding truncation error",
+  "description": "compute_sales_tax truncates decimals instead of standard half-up rounding",
+  "target_file": "tax.py",
+  "target_function": "compute_sales_tax",
+  "query": "fix sales tax calculation cents rounding truncation"
+}
