@@ -1,0 +1,8 @@
+{
+  "id": "case_14_user_age",
+  "title": "Calculate age birthday check",
+  "description": "calculate_age does not account for whether birthday has occurred this year",
+  "target_file": "age.py",
+  "target_function": "calculate_age",
+  "query": "fix user age calculation birthday occurrence check"
+}

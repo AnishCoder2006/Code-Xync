@@ -1,17 +1,19 @@
-export function sanitizeIdentifier(id: string): string {
+function sanitizeIdentifier(id) {
     return id.replace(/[^a-zA-Z0-9_]/g, "");
 }
 
-export function buildWhereClause(clauses: string[]): string {
+function buildWhereClause(clauses) {
     if (!clauses || clauses.length === 0) return "";
     let sql = "WHERE ";
-    // BUG: join with AND + trailing AND
+    // BUG: join with AND leaves trailing AND
     for (const c of clauses) {
         sql += c + " AND ";
     }
     return sql;
 }
 
-export function buildSelect(table: string, fields: string[]): string {
+function buildSelect(table, fields) {
     return `SELECT ${fields.join(", ")} FROM ${table}`;
 }
+
+module.exports = { sanitizeIdentifier, buildWhereClause, buildSelect };

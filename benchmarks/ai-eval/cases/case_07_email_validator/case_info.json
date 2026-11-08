@@ -2,7 +2,7 @@
   "id": "case_07_email_validator",
   "title": "Email validator rejects plus signs",
   "description": "validateEmailAddress regex omits plus characters in local email parts",
-  "target_file": "validator.ts",
+  "target_file": "validator.js",
   "target_function": "validateEmailAddress",
   "query": "fix email validation regex to support plus sign addressing"
 }

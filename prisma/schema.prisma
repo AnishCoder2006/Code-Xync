@@ -90,10 +90,13 @@ model AIInteraction {
   userId        String
   prompt        String
   baseVersion   String    // Yjs state vector recorded at request time (section 5.1 step 1)
-  status        String    // pending | verified | failed | stale | rejected
+  baseContent   String?   // Full file text at request time
+  status        String    // pending | verified | unverified_no_test | failed | stale | accepted | rejected
   diffPatch     String?
   tokensUsed    Int?
   costUsd       Float?
+  attempts      Int?
+  timings       Json?
   createdAt     DateTime  @default(now())
   room          Room      @relation(fields: [roomId], references: [id])
   user          User      @relation(fields: [userId], references: [id])

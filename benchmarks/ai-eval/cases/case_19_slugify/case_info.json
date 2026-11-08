@@ -1,0 +1,8 @@
+{
+  "id": "case_19_slugify",
+  "title": "URL slug generator trailing hyphen",
+  "description": "slugify_string leaves duplicate or trailing hyphens",
+  "target_file": "slug.py",
+  "target_function": "slugify_string",
+  "query": "fix url slug generation remove trailing hyphens and duplicate separators"
+}

@@ -5,3 +5,6 @@ def test_expiry():
     now_ms = int(time.time() * 1000)
     exp_seconds = int(time.time()) + 3600
     assert verify_token_expiry({"exp": exp_seconds}, now_ms) is True
+
+if __name__ == "__main__":
+    test_expiry()

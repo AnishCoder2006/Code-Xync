@@ -1,0 +1,8 @@
+{
+  "id": "case_24_fizzbuzz_ext",
+  "title": "Custom FizzBuzz divisible by both 3 and 5",
+  "description": "custom_fizzbuzz checks both condition first",
+  "target_file": "fizzbuzz.py",
+  "target_function": "custom_fizzbuzz",
+  "query": "fix custom fizzbuzz both divisible condition order"
+}

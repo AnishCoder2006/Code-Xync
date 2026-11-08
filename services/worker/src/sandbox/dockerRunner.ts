@@ -12,9 +12,18 @@ const execFileAsync = promisify(execFile);
 export interface ExecutionResult {
   status: "passed" | "failed" | "timeout" | "killed" | "truncated";
   code: number | null;
+  exitCode: number | null;
+  stdout: string;
+  stderr: string;
   runTimeMs: number;
   stdoutTrunc: string;
   stderrTrunc: string;
+}
+
+export interface SnapshotOptions {
+  files?: Record<string, string>;
+  command?: string[];
+  isSnapshot?: boolean;
 }
 
 export const runInDocker = async (
@@ -22,7 +31,8 @@ export const runInDocker = async (
   roomId: string,
   code: string,
   language: string,
-  redis: Redis
+  redis: Redis,
+  snapshotOptions?: SnapshotOptions
 ): Promise<ExecutionResult> => {
   const containerName = `codesync-job-${jobId}`;
   const channel = `room:${roomId}:execution:${jobId}`;
@@ -36,22 +46,33 @@ export const runInDocker = async (
     // Ignore error if container doesn't exist
   }
 
-  // Set up temp directory and code file
+  // Set up temp directory
   const tmpDir = await fs.mkdtemp(path.join(os.tmpdir(), `job-${jobId}-`));
   const isPython = language === "python";
   const isBash = language === "bash" || language === "sh";
-  const filename = isPython ? "main.py" : isBash ? "script.sh" : "index.js";
-  const filePath = path.join(tmpDir, filename);
+  const isSnapshot = !!(snapshotOptions?.isSnapshot || snapshotOptions?.files);
 
-  await fs.writeFile(filePath, code);
+  if (isSnapshot && snapshotOptions?.files) {
+    for (const [relPath, content] of Object.entries(snapshotOptions.files)) {
+      const fullPath = path.join(tmpDir, relPath);
+      await fs.mkdir(path.dirname(fullPath), { recursive: true });
+      await fs.writeFile(fullPath, content);
+    }
+  } else {
+    const filename = isPython ? "main.py" : isBash ? "script.sh" : "index.js";
+    const filePath = path.join(tmpDir, filename);
+    await fs.writeFile(filePath, code);
+  }
 
   let timeoutTimer: NodeJS.Timeout | null = null;
 
   try {
-    // ── Wait for frontend to signal it has subscribed to the output channel ──
-    const readyResult = await redis.blpop(readyKey, 5);
-    if (!readyResult) {
-      console.warn(`[worker] job ${jobId}: no ready signal in 5s, proceeding anyway`);
+    // Only wait for ready signal on interactive jobs (skip for snapshot / AI jobs)
+    if (!isSnapshot) {
+      const readyResult = await redis.blpop(readyKey, 5);
+      if (!readyResult) {
+        console.warn(`[worker] job ${jobId}: no ready signal in 5s, proceeding anyway`);
+      }
     }
 
     // Idempotency check: only publish "start" if this job hasn't already started
@@ -70,7 +91,6 @@ export const runInDocker = async (
       .catch((e) => console.warn(`[worker] Failed to set status running for job ${jobId}:`, e));
 
     const image = isPython || isBash ? "codesync-sandbox-python" : "codesync-sandbox-node";
-    const cmdArgs = [`/app/${filename}`];
 
     // Docker run flags constructed from SANDBOX_LIMITS
     const dockerArgs = [
@@ -87,14 +107,40 @@ export const runInDocker = async (
       "--memory-swap", `${SANDBOX_LIMITS.memoryMb}m`,
       "--cpus", `${SANDBOX_LIMITS.cpus}`,
       "--pids-limit", `${SANDBOX_LIMITS.pidsLimit}`,
-      "-v", `${filePath}:/app/${filename}:ro`,
     ];
 
-    if (isBash) {
-      dockerArgs.push("--entrypoint", "/bin/bash");
-    }
+    if (isSnapshot) {
+      dockerArgs.push("-v", `${tmpDir}:/app:ro`);
+      dockerArgs.push("-w", "/app");
 
-    dockerArgs.push(image, ...cmdArgs);
+      const cmd = snapshotOptions?.command && snapshotOptions.command.length > 0
+        ? snapshotOptions.command
+        : isPython ? ["python3", "main.py"] : ["node", "index.js"];
+
+      if (isPython) {
+        dockerArgs.push("--entrypoint", "python3");
+        dockerArgs.push(image);
+        const args = (cmd[0] === "python" || cmd[0] === "python3") ? cmd.slice(1) : cmd;
+        dockerArgs.push(...args);
+      } else if (isBash) {
+        dockerArgs.push("--entrypoint", "/bin/bash");
+        dockerArgs.push(image);
+        dockerArgs.push(...cmd);
+      } else {
+        dockerArgs.push("--entrypoint", "node");
+        dockerArgs.push(image);
+        const args = cmd[0] === "node" ? cmd.slice(1) : cmd;
+        dockerArgs.push(...args);
+      }
+    } else {
+      const filename = isPython ? "main.py" : isBash ? "script.sh" : "index.js";
+      const filePath = path.join(tmpDir, filename);
+      dockerArgs.push("-v", `${filePath}:/app/${filename}:ro`);
+      if (isBash) {
+        dockerArgs.push("--entrypoint", "/bin/bash");
+      }
+      dockerArgs.push(image, `/app/${filename}`);
+    }
 
     return await new Promise<ExecutionResult>((resolve, reject) => {
       let isDone = false;
@@ -152,13 +198,18 @@ export const runInDocker = async (
           })
           .catch((e) => console.warn(`[worker] DB update error on timeout for ${jobId}:`, e));
 
-        resolve({
+        const timeoutResult: ExecutionResult = {
           status: "timeout",
           code: 124,
+          exitCode: 124,
+          stdout: stdoutAccum,
+          stderr: stderrAccum,
           runTimeMs,
           stdoutTrunc: stdoutAccum,
           stderrTrunc: stderrAccum,
-        });
+        };
+        await redis.set(`execution:result:${jobId}`, JSON.stringify(timeoutResult), "EX", 300);
+        resolve(timeoutResult);
       }, SANDBOX_LIMITS.timeoutMs);
 
       child.stdout.on("data", async (chunk: Buffer) => {
@@ -274,13 +325,18 @@ export const runInDocker = async (
           })
           .catch((e) => console.warn(`[worker] DB update error on close for ${jobId}:`, e));
 
-        resolve({
+        const executionResult: ExecutionResult = {
           status: finalStatus,
           code,
+          exitCode: code,
+          stdout: stdoutAccum,
+          stderr: stderrAccum,
           runTimeMs,
           stdoutTrunc: stdoutAccum,
           stderrTrunc: stderrAccum,
-        });
+        };
+        await redis.set(`execution:result:${jobId}`, JSON.stringify(executionResult), "EX", 300);
+        resolve(executionResult);
       });
     });
   } finally {

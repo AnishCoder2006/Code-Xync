@@ -6,7 +6,7 @@ import { requireAuth } from "@clerk/express";
 import { attachUser } from "../middleware/auth";
 import { logger } from "../middleware/logger";
 import { prisma } from "../lib/prisma";
-import { executionRateLimiter } from "../middleware/rateLimit";
+import { executionRateLimiter, sandboxRateLimiter } from "../middleware/rateLimit";
 
 const router = Router();
 const redisUrl = process.env.REDIS_URL || "redis://localhost:6380";
@@ -33,6 +33,87 @@ export const executionQueue = new Queue("code_execution", {
 
 const MAX_CODE_SIZE_BYTES = 100 * 1024; // 100 KB max code size
 const MAX_QUEUE_LENGTH = parseInt(process.env.MAX_QUEUE_LENGTH || "50", 10);
+const INTERNAL_SECRET = process.env.INTERNAL_API_SECRET || "codesync-internal-ai-secret";
+
+const verifyInternalAuth = (req: Request, res: Response, next: import("express").NextFunction) => {
+  const secretHeader = req.get("x-internal-secret") || req.get("authorization")?.replace(/^Bearer\s+/i, "");
+  if (!secretHeader || secretHeader !== INTERNAL_SECRET) {
+    logger.warn({ ip: req.ip }, "Unauthorized internal sandbox request: missing or invalid secret");
+    return res.status(401).json({ error: "Unauthorized: Invalid or missing internal secret header" });
+  }
+  next();
+};
+
+/**
+ * POST /execution/sandbox
+ * Internal/AI sandbox endpoint to run a project snapshot with a command.
+ * Authenticated via internal shared secret header (X-Internal-Secret).
+ * Rate-limited via sandboxRateLimiter.
+ * Worker executes in hardened container with ALL limits preserved.
+ */
+router.post("/sandbox", verifyInternalAuth, sandboxRateLimiter, async (req: Request, res: Response) => {
+  try {
+    const { roomId, files, command, language } = req.body;
+    if (!files || !command || !language) {
+      return res.status(400).json({ error: "Missing required fields: files, command, language" });
+    }
+
+    const payloadStr = JSON.stringify(files);
+    if (Buffer.byteLength(payloadStr, "utf8") > 1024 * 1024) {
+      return res.status(413).json({ error: "Snapshot payload exceeds 1MB limit" });
+    }
+
+    const jobCounts = await executionQueue.getJobCounts("waiting", "active", "delayed");
+    const totalInFlight = jobCounts.waiting + jobCounts.active + jobCounts.delayed;
+    if (totalInFlight >= MAX_QUEUE_LENGTH) {
+      return res.status(503).json({ error: "busy, retry shortly" });
+    }
+
+    const jobId = uuidv4();
+    const effectiveRoomId = roomId || "ai-sandbox";
+
+    await executionQueue.add(
+      "run",
+      {
+        roomId: effectiveRoomId,
+        files,
+        command,
+        language,
+        isSnapshot: true,
+      },
+      {
+        jobId,
+        attempts: 1,
+        removeOnComplete: { age: 3600, count: 1000 },
+        removeOnFail: { age: 86400, count: 5000 },
+      }
+    );
+
+    const resultKey = `execution:result:${jobId}`;
+    const startTime = Date.now();
+    const maxWaitMs = 25000;
+
+    while (Date.now() - startTime < maxWaitMs) {
+      const raw = await redisConnection.get(resultKey);
+      if (raw) {
+        const result = JSON.parse(raw);
+        return res.json({
+          status: result.status,
+          exitCode: result.exitCode ?? result.code,
+          stdout: result.stdout ?? result.stdoutTrunc ?? "",
+          stderr: result.stderr ?? result.stderrTrunc ?? "",
+          runTimeMs: result.runTimeMs,
+        });
+      }
+      await new Promise((r) => setTimeout(r, 80));
+    }
+
+    return res.status(504).json({ error: "Sandbox execution timed out" });
+  } catch (err: any) {
+    logger.error({ err }, "Sandbox execution error");
+    return res.status(500).json({ error: err.message });
+  }
+});
 
 if (process.env.NODE_ENV === "test") {
   router.use((req: Request, res: Response, next: import("express").NextFunction) => {

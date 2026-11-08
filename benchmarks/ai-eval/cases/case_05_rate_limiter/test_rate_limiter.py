@@ -2,6 +2,9 @@ from rate_limiter import check_rate_limit
 
 def test_rate_limit():
     now = 1000.0
-    history = [920.0, 930.0, 950.0]
-    # Window 60s -> window_start is 940.0. Only 950.0 is inside window!
-    assert check_rate_limit(history, max_runs=2, window_sec=60, now=now) is True
+    history = [990.0, 995.0, 999.0]
+    # 3 requests in the 60s window exceeding limit of 2 must return False
+    assert check_rate_limit(history, max_runs=2, window_sec=60, now=now) is False
+
+if __name__ == "__main__":
+    test_rate_limit()

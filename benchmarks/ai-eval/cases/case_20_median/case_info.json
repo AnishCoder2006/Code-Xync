@@ -1,0 +1,8 @@
+{
+  "id": "case_20_median",
+  "title": "Median calculation for even list length",
+  "description": "calculate_median integer division on even lengths",
+  "target_file": "stats.py",
+  "target_function": "calculate_median",
+  "query": "fix calculate median average of two middle elements for even length"
+}

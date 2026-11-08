@@ -2,7 +2,7 @@
   "id": "case_09_query_builder",
   "title": "SQL query builder trailing AND bug",
   "description": "buildWhereClause appends AND keyword even when conditions list has only 1 clause",
-  "target_file": "query_builder.ts",
+  "target_file": "query_builder.js",
   "target_function": "buildWhereClause",
   "query": "fix SQL where clause builder trailing AND clause generation"
 }

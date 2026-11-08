@@ -13,6 +13,8 @@ interface FixState {
   interactionId: string;
   original: string;   // code at the time the AI was triggered
   patch: string;      // AI-proposed version
+  original_code?: string;
+  new_code?: string;
 }
 
 export default function Room() {
@@ -73,22 +75,41 @@ export default function Room() {
     });
 
     if (!res.ok) { alert("AI request failed"); return; }
-    const { patch, interactionId } = await res.json();
-    setFixState({ interactionId, original: code, patch });
+    const data = await res.json();
+    const { patch, interactionId, original_code, new_code, patched_text } = data;
+    setFixState({
+      interactionId,
+      original: code,
+      patch: patched_text ?? patch,
+      original_code,
+      new_code,
+    });
   };
 
-  // ── Accept — apply patch through Yjs transaction ─────────────────────────
+  // ── Accept — apply patch through sync service /apply-patch in ONE transaction ──
   const handleAccept = async () => {
     if (!fixState) return;
     const token = await getToken();
-    // Persist the decision on the server — audit trail for both paths
-    await fetch(`${API}/ai/${fixState.interactionId}`, {
+    const res = await fetch(`${API}/ai/${fixState.interactionId}/accept`, {
       method: "PATCH",
       headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
-      body: JSON.stringify({ status: "verified" }),
+      body: JSON.stringify({
+        oldRangeText: fixState.original_code,
+        newCode: fixState.new_code,
+      }),
     });
-    // Apply patch into Yjs document in a transaction so all peers receive the update
-    getCodeRef.current?.applyPatch?.(fixState.patch);
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      const message = err.error || "Failed to accept fix";
+      if (res.status === 409) {
+        // On 409 conflict: keep diff open so user can review the change, do NOT clear fixState
+        alert(`Conflict: ${message}`);
+        return;
+      }
+      alert(message);
+      setFixState(null);
+      return;
+    }
     setFixState(null);
   };
 

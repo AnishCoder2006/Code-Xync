@@ -163,18 +163,25 @@ class QdrantStore:
             logger.info(f"Upserting {len(points_to_upsert)} chunks to Qdrant for room {room_id}, file {file_id}")
             self.client.upsert(collection_name=self.collection_name, points=points_to_upsert)
 
-    def delete_file(self, file_id: str):
-        """Delete all points associated with a file_id."""
+    def delete_file(self, room_id: str, file_id: str):
+        """Delete all points associated with a room_id and file_id."""
+        if not room_id or not room_id.strip():
+            raise ValueError("room_id is required and cannot be empty")
         if not file_id or not file_id.strip():
             raise ValueError("file_id is required and cannot be empty")
 
         self.client.delete(
             collection_name=self.collection_name,
             points_selector=models.FilterSelector(
-                filter=Filter(must=[FieldCondition(key="file_id", match=MatchValue(value=file_id))])
+                filter=Filter(
+                    must=[
+                        FieldCondition(key="room_id", match=MatchValue(value=room_id)),
+                        FieldCondition(key="file_id", match=MatchValue(value=file_id)),
+                    ]
+                )
             ),
         )
-        logger.info(f"Deleted points for file_id {file_id}")
+        logger.info(f"Deleted points for room_id {room_id}, file_id {file_id}")
 
     def delete_room(self, room_id: str):
         """Delete all points associated with a room_id."""

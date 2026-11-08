@@ -42,6 +42,7 @@ import {
 } from "./persistence";
 
 const port = Number(process.env.SYNC_PORT ?? 4001);
+const INTERNAL_SECRET = process.env.INTERNAL_API_SECRET || "codesync-internal-ai-secret";
 
 // Per-room state
 interface RoomState {
@@ -64,8 +65,20 @@ const getRoom = async (roomId: string): Promise<RoomState> => {
     await loadRoomPersistence(roomId, doc);
 
     // Track dirty state and debounced idle indexing events on any doc updates
-    doc.on("update", () => {
+    doc.on("update", (update: Uint8Array, origin: any) => {
       markRoomDirty(roomId, doc);
+
+      if (origin === "ai-accept" || origin === "server") {
+        const encoder = encoding.createEncoder();
+        encoding.writeVarUint(encoder, MESSAGE_SYNC);
+        syncProtocol.writeUpdate(encoder, update);
+        const data = encoding.toUint8Array(encoder);
+        room?.clients.forEach((client) => {
+          if (client.readyState === WebSocket.OPEN) {
+            client.send(data);
+          }
+        });
+      }
     });
   }
   return room;
@@ -111,7 +124,166 @@ const broadcastToRoom = (roomState: RoomState, sender: WebSocket, data: Uint8Arr
   });
 };
 
-const server = http.createServer((_req, res) => {
+const server = http.createServer(async (req, res) => {
+  // Check shared internal secret for all HTTP routes
+  const secretHeader =
+    req.headers["x-internal-secret"] ||
+    (typeof req.headers["authorization"] === "string"
+      ? req.headers["authorization"].replace(/^Bearer\s+/i, "")
+      : null);
+
+  if (!secretHeader || secretHeader !== INTERNAL_SECRET) {
+    res.writeHead(401, { "Content-Type": "application/json" });
+    res.end(JSON.stringify({ error: "Unauthorized: missing or invalid internal secret" }));
+    return;
+  }
+
+  const parsedUrl = urlModule.parse(req.url || "", true);
+  const pathname = parsedUrl.pathname || "";
+
+  // 1. GET /room/:roomId/state
+  const stateMatch = pathname.match(/^\/room\/([^\/\?]+)\/state$/);
+  if (req.method === "GET" && stateMatch) {
+    try {
+      const roomId = decodeURIComponent(stateMatch[1]);
+      const room = await getRoom(roomId);
+      const meta = await loadRoomPersistence(roomId, room.doc);
+      const stateVector = Buffer.from(Y.encodeStateVector(room.doc)).toString("base64");
+      const content = room.doc.getText("content").toString();
+
+      res.writeHead(200, { "Content-Type": "application/json" });
+      res.end(
+        JSON.stringify({
+          roomId,
+          stateVector,
+          content,
+          fileId: meta.fileId,
+          path: meta.path,
+          language: meta.language,
+        })
+      );
+      return;
+    } catch (err: any) {
+      console.error("[sync] Error getting room state:", err);
+      res.writeHead(500, { "Content-Type": "application/json" });
+      res.end(JSON.stringify({ error: err.message }));
+      return;
+    }
+  }
+
+  // 2. POST /room/:roomId/apply-patch
+  const patchMatch = pathname.match(/^\/room\/([^\/\?]+)\/apply-patch$/);
+  if (req.method === "POST" && patchMatch) {
+    try {
+      const roomId = decodeURIComponent(patchMatch[1]);
+      let bodyStr = "";
+      req.on("data", (chunk) => {
+        bodyStr += chunk;
+      });
+      req.on("end", async () => {
+        try {
+          const body = JSON.parse(bodyStr || "{}");
+          const { startOffset, deleteLength, newCode, oldRangeText } = body;
+
+          const room = await getRoom(roomId);
+          const ytext = room.doc.getText("content");
+          const currentText = ytext.toString();
+
+          let offset = typeof startOffset === "number" ? startOffset : -1;
+          let len = typeof deleteLength === "number" ? deleteLength : (oldRangeText ? oldRangeText.length : 0);
+
+          // Apply replacement in single Yjs transaction with atomic exactly-once check
+          let txError: { status: number; message: string } | null = null;
+          const txStatus: { error: { status: number; message: string } | null } = { error: null };
+          room.doc.transact(() => {
+            const currentText = ytext.toString();
+            if (oldRangeText) {
+              const occurrences = currentText.split(oldRangeText).length - 1;
+              if (occurrences === 0) {
+                txStatus.error = {
+                  status: 409,
+                  message: "Target code range not found in current document",
+                };
+                return;
+              }
+              if (occurrences > 1) {
+                txStatus.error = {
+                  status: 409,
+                  message: "Target code range is ambiguous (found multiple times in current document)",
+                };
+                return;
+              }
+              const actualOffset = currentText.indexOf(oldRangeText);
+              ytext.delete(actualOffset, oldRangeText.length);
+              if (newCode && newCode.length > 0) {
+                ytext.insert(actualOffset, newCode);
+              }
+            } else {
+              if (offset < 0 || offset > currentText.length) {
+                txStatus.error = {
+                  status: 409,
+                  message: "Invalid offset or target text not found in current doc",
+                };
+                return;
+              }
+              if (len > 0) {
+                ytext.delete(offset, len);
+              }
+              if (newCode && newCode.length > 0) {
+                ytext.insert(offset, newCode);
+              }
+            }
+          }, "ai-accept");
+
+          if (txStatus.error) {
+            res.writeHead(txStatus.error.status, { "Content-Type": "application/json" });
+            res.end(JSON.stringify({ error: txStatus.error.message }));
+            return;
+          }
+
+          const updatedText = ytext.toString();
+          const newStateVector = Buffer.from(Y.encodeStateVector(room.doc)).toString("base64");
+
+          res.writeHead(200, { "Content-Type": "application/json" });
+          res.end(
+            JSON.stringify({
+              success: true,
+              content: updatedText,
+              stateVector: newStateVector,
+            })
+          );
+        } catch (innerErr: any) {
+          console.error("[sync] Error applying patch body:", innerErr);
+          res.writeHead(400, { "Content-Type": "application/json" });
+          res.end(JSON.stringify({ error: innerErr.message }));
+        }
+      });
+      return;
+    } catch (err: any) {
+      console.error("[sync] Error handling apply-patch:", err);
+      res.writeHead(500, { "Content-Type": "application/json" });
+      res.end(JSON.stringify({ error: err.message }));
+      return;
+    }
+  }
+
+  // 3. GET /room/:roomId/text — returns just the document text
+  const textMatch = pathname.match(/^\/room\/([^\/\?]+)\/text$/);
+  if (req.method === "GET" && textMatch) {
+    try {
+      const roomId = decodeURIComponent(textMatch[1]);
+      const room = await getRoom(roomId);
+      const content = room.doc.getText("content").toString();
+      res.writeHead(200, { "Content-Type": "application/json" });
+      res.end(JSON.stringify({ roomId, content }));
+      return;
+    } catch (err: any) {
+      res.writeHead(500, { "Content-Type": "application/json" });
+      res.end(JSON.stringify({ error: err.message }));
+      return;
+    }
+  }
+
   res.writeHead(200);
   res.end("CodeSync Sync Service");
 });

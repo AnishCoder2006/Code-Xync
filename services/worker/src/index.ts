@@ -16,7 +16,7 @@ const activeContainers = new Set<string>();
 const worker = new Worker(
   "code_execution",
   async (job: Job) => {
-    const { code, language, roomId } = job.data;
+    const { code, language, roomId, files, command, isSnapshot } = job.data;
     const jobId = job.id as string;
     const containerName = `codesync-job-${jobId}`;
     activeContainers.add(containerName);
@@ -24,7 +24,14 @@ const worker = new Worker(
     console.log(`[worker] Executing job ${jobId} (attempt ${job.attemptsMade + 1}) for room ${roomId}`);
 
     try {
-      const result = await runInDocker(jobId, roomId, code, language, redisConnection);
+      const result = await runInDocker(
+        jobId,
+        roomId,
+        code || "",
+        language,
+        redisConnection,
+        { files, command, isSnapshot: isSnapshot || !!files }
+      );
       return result;
     } finally {
       activeContainers.delete(containerName);

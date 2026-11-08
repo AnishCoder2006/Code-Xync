@@ -1,0 +1,8 @@
+{
+  "id": "case_17_levenshtein",
+  "title": "Levenshtein distance base cases",
+  "description": "levenshtein_distance matrix dimension off-by-one",
+  "target_file": "distance.py",
+  "target_function": "levenshtein_distance",
+  "query": "fix levenshtein distance string difference calculation"
+}

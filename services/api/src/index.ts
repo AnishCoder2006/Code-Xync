@@ -1,5 +1,10 @@
 // API service entrypoint — REST routes, auth, RBAC, job enqueue.
 // See design doc section 1.2 (service responsibilities) and 3.2 (job queue).
+
+if (process.env.NODE_ENV === "test" && process.env.CLERK_SECRET_KEY?.startsWith("sk_live")) {
+  throw new Error("FATAL: Live Clerk secret key detected in test environment (NODE_ENV=test). Aborting startup to prevent accidental production mutations.");
+}
+
 import express from "express";
 import { loggerMiddleware, logger } from "./middleware/logger";
 import roomsRouter from "./routes/rooms";

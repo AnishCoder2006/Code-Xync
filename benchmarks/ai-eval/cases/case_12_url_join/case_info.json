@@ -1,0 +1,8 @@
+{
+  "id": "case_12_url_join",
+  "title": "URL join double slash bug",
+  "description": "join_url_path creates double slashes when joining base and subpath",
+  "target_file": "url_utils.py",
+  "target_function": "join_url_path",
+  "query": "fix url join path duplicate slash bug"
+}

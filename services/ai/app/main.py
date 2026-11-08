@@ -7,6 +7,7 @@ from contextlib import asynccontextmanager
 from fastapi import FastAPI
 from app.routes.search import router as search_router
 from app.routes.indexing import router as indexing_router, start_indexing_worker, stop_indexing_worker
+from app.routes.fix import router as fix_router
 
 
 @asynccontextmanager
@@ -28,3 +29,4 @@ def health():
 
 app.include_router(search_router)
 app.include_router(indexing_router)
+app.include_router(fix_router)

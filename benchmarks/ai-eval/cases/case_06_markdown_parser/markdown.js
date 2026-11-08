@@ -1,18 +1,13 @@
-export interface CodeBlock {
-    lang: string;
-    code: string;
-}
-
-export function extractFrontmatter(source: string): Record<string, string> {
+function extractFrontmatter(source) {
     return {};
 }
 
-export function parseFencedCodeBlocks(markdown: string): CodeBlock[] {
+function parseFencedCodeBlocks(markdown) {
     const lines = markdown.split("\n");
-    const blocks: CodeBlock[] = [];
+    const blocks = [];
     let inside = false;
     let currentLang = "";
-    let buffer: string[] = [];
+    let buffer = [];
 
     for (const line of lines) {
         if (line.startsWith("```")) {
@@ -31,3 +26,5 @@ export function parseFencedCodeBlocks(markdown: string): CodeBlock[] {
     // BUG: if inside is still true at EOF, buffer is discarded
     return blocks;
 }
+
+module.exports = { parseFencedCodeBlocks, extractFrontmatter };

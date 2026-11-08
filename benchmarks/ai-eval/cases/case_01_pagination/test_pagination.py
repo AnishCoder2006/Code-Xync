@@ -1,5 +1,7 @@
 from pagination import calculate_page_offset
 
 def test_page_offset():
-    # Page 1 should start at index 0
     assert calculate_page_offset(1, 10) == 0
+
+if __name__ == "__main__":
+    test_page_offset()

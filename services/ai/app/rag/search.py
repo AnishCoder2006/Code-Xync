@@ -7,15 +7,21 @@ See design doc section 4.3.
 import logging
 from typing import List, Dict, Any, Optional
 
-from app.rag.embedder import get_embedder
-from app.rag.qdrant_store import get_qdrant_store
+from app.rag.embedder import get_embedder, BaseEmbedder
+from app.rag.qdrant_store import get_qdrant_store, QdrantStore
 
 logger = logging.getLogger(__name__)
 
 RRF_K = 60
 
 
-def hybrid_search(room_id: str, query: str, limit: int = 10) -> List[Dict[str, Any]]:
+def hybrid_search(
+    room_id: str,
+    query: str,
+    limit: int = 10,
+    store: Optional[QdrantStore] = None,
+    embedder: Optional[Any] = None,
+) -> List[Dict[str, Any]]:
     """
     Perform hybrid search in room_id:
     1. Room-filtered vector search using embedding of query.
@@ -28,8 +34,8 @@ def hybrid_search(room_id: str, query: str, limit: int = 10) -> List[Dict[str, A
         return []
 
     clean_query = query.strip()
-    embedder = get_embedder()
-    store = get_qdrant_store()
+    embedder = embedder or get_embedder()
+    store = store or get_qdrant_store()
 
     # 1. Vector Search
     query_vector = embedder.embed([clean_query])[0]

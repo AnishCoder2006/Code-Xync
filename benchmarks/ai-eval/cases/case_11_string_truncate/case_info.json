@@ -1,0 +1,8 @@
+{
+  "id": "case_11_string_truncate",
+  "title": "String truncation off-by-one length",
+  "description": "truncate_text exceeds max_len when appending ellipsis",
+  "target_file": "text_utils.py",
+  "target_function": "truncate_text",
+  "query": "fix string truncate length limit with ellipsis"
+}

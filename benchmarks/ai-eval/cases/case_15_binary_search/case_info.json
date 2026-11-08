@@ -1,0 +1,8 @@
+{
+  "id": "case_15_binary_search",
+  "title": "Binary search off by one",
+  "description": "binary_search right pointer boundary off by one",
+  "target_file": "search_algo.py",
+  "target_function": "binary_search",
+  "query": "fix binary search index lookup boundary"
+}

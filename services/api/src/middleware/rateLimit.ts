@@ -6,6 +6,8 @@ const redis = new Redis(process.env.REDIS_URL || "redis://localhost:6380");
 interface RateLimitOptions {
   windowMs?: number;
   limit?: number;
+  keyGenerator?: (req: Request) => string | null;
+  message?: string;
 }
 
 export const createRateLimiter = (options?: RateLimitOptions) => {
@@ -14,12 +16,16 @@ export const createRateLimiter = (options?: RateLimitOptions) => {
 
   return async (req: Request, res: Response, next: NextFunction) => {
     try {
-      const userId = req.user?.id;
-      if (!userId) {
+      const key = options?.keyGenerator
+        ? options.keyGenerator(req)
+        : req.user?.id
+        ? `ratelimit:${req.user.id}:execution`
+        : null;
+
+      if (!key) {
         return next();
       }
 
-      const key = `ratelimit:${userId}:execution`;
       const now = Date.now();
       const clearBefore = now - windowMs;
 
@@ -47,7 +53,7 @@ export const createRateLimiter = (options?: RateLimitOptions) => {
 
         res.setHeader("Retry-After", retryAfterSec.toString());
         return res.status(429).json({
-          error: "Rate limit exceeded. Maximum 10 runs per minute allowed.",
+          error: options?.message || `Rate limit exceeded. Maximum ${limit} requests per minute allowed.`,
           retryAfter: retryAfterSec,
         });
       }
@@ -70,3 +76,13 @@ export const createRateLimiter = (options?: RateLimitOptions) => {
 };
 
 export const executionRateLimiter = createRateLimiter();
+
+export const sandboxRateLimiter = createRateLimiter({
+  windowMs: 60000,
+  limit: parseInt(process.env.SANDBOX_RATE_PER_MIN || "30", 10),
+  keyGenerator: (req: Request) => {
+    const secret = req.get("x-internal-secret") || req.get("authorization") || req.ip || "internal";
+    return `ratelimit:sandbox:${secret}`;
+  },
+  message: "Sandbox rate limit exceeded.",
+});

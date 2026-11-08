@@ -7,7 +7,7 @@ import { MonacoBinding } from "y-monaco";
 interface EditorProps {
   roomId: string;
   language: string;
-  onReady?: (helpers: { getCode: () => string; applyPatch: (patch: string) => void } & (() => string)) => void;
+  onReady?: (helpers: { getCode: () => string } & (() => string)) => void;
   // When both are non-null the component renders a side-by-side diff
   diffOriginal?: string | null;
   diffModified?: string | null;
@@ -18,16 +18,6 @@ export function Editor({ roomId, language, onReady, diffOriginal, diffModified }
   const providerRef = useRef<WebsocketProvider | null>(null);
   const bindingRef = useRef<MonacoBinding | null>(null);
   const editorRef = useRef<any>(null);
-
-  const applyPatch = useCallback((patch: string) => {
-    const ydoc = ydocRef.current;
-    if (!ydoc) return;
-    const ytext = ydoc.getText("content");
-    ydoc.transact(() => {
-      ytext.delete(0, ytext.length);
-      ytext.insert(0, patch);
-    });
-  }, []);
 
   // Initialise Yjs + WS provider once on mount; tear down on unmount
   useEffect(() => {
@@ -50,7 +40,7 @@ export function Editor({ roomId, language, onReady, diffOriginal, diffModified }
       if (editorRef.current) return editorRef.current.getValue();
       return ydoc.getText("content").toString();
     };
-    const helpers = Object.assign(getCode, { getCode, applyPatch });
+    const helpers = Object.assign(getCode, { getCode });
     onReady?.(helpers as any);
 
     return () => {
@@ -58,7 +48,7 @@ export function Editor({ roomId, language, onReady, diffOriginal, diffModified }
       provider.destroy();
       ydoc.destroy();
     };
-  }, [roomId, onReady, applyPatch]);
+  }, [roomId, onReady]);
 
   // Bind Monaco to Yjs ONLY after the provider fires "synced"
   // Prevents the "cursor jumps to top / first edit is lost" bug
@@ -80,7 +70,7 @@ export function Editor({ roomId, language, onReady, diffOriginal, diffModified }
         bindingRef.current = binding;
         // Expose a stable getCode() callback so the parent page can read value
         const getCode = () => editor.getValue();
-        const helpers = Object.assign(getCode, { getCode, applyPatch });
+        const helpers = Object.assign(getCode, { getCode });
         onReady?.(helpers as any);
       };
 
@@ -92,7 +82,7 @@ export function Editor({ roomId, language, onReady, diffOriginal, diffModified }
         });
       }
     },
-    [onReady, applyPatch]
+    [onReady]
   );
 
   // Diff-preview mode: shown while the Accept/Reject bar is visible

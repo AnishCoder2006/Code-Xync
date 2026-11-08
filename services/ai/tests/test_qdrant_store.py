@@ -84,7 +84,51 @@ def test_cross_room_isolation_and_delete(store):
     assert "beta" in res_b[0]["text"]
 
     # Delete file in Room A
-    store.delete_file("file-1")
+    store.delete_file(room_a, "file-1")
     assert len(store.search_vectors(room_a, vec_a[0], limit=10)) == 0
     # Room B still intact
     assert len(store.search_vectors(room_b, vec_b[0], limit=10)) == 1
+
+
+def test_delete_file_shared_file_id_across_rooms(store):
+    room_1 = "room-shared-1"
+    room_2 = "room-shared-2"
+    shared_file_id = "shared-file-xyz"
+
+    chunk_1 = CodeChunk(
+        text="def computeMetrics(): return 42",
+        ast_type="function",
+        function_name="computeMetrics",
+        language="python",
+        start_line=1,
+        end_line=2,
+        content_hash="hash_m1",
+    )
+    chunk_2 = CodeChunk(
+        text="def computeMetrics(): return 99",
+        ast_type="function",
+        function_name="computeMetrics",
+        language="python",
+        start_line=1,
+        end_line=2,
+        content_hash="hash_m2",
+    )
+
+    vec_1 = embedder.embed([chunk_1.text])
+    vec_2 = embedder.embed([chunk_2.text])
+
+    # Both rooms use the EXACT SAME file_id
+    store.upsert_chunks(room_1, shared_file_id, "metrics.py", [chunk_1], vec_1)
+    store.upsert_chunks(room_2, shared_file_id, "metrics.py", [chunk_2], vec_2)
+
+    assert len(store.search_vectors(room_1, vec_1[0], limit=10)) == 1
+    assert len(store.search_vectors(room_2, vec_2[0], limit=10)) == 1
+
+    # Deleting the file in room_1 must NOT affect room_2
+    store.delete_file(room_1, shared_file_id)
+
+    assert len(store.search_vectors(room_1, vec_1[0], limit=10)) == 0
+    res_2 = store.search_vectors(room_2, vec_2[0], limit=10)
+    assert len(res_2) == 1
+    assert res_2[0]["room_id"] == room_2
+    assert "99" in res_2[0]["text"]

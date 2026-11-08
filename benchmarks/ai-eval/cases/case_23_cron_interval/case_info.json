@@ -1,0 +1,8 @@
+{
+  "id": "case_23_cron_interval",
+  "title": "Cron interval minute step overflow",
+  "description": "next_minute_step handles 60-minute overflow modulo",
+  "target_file": "cron_calc.py",
+  "target_function": "next_minute_step",
+  "query": "fix cron interval minute step overflow modulo"
+}

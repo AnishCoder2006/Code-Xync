@@ -15,6 +15,18 @@ declare global {
 
 export const attachUser = async (req: Request, res: Response, next: NextFunction) => {
   try {
+    if (process.env.NODE_ENV === "test") {
+      const authHeader = req.headers.authorization;
+      if (authHeader && authHeader.startsWith("Bearer test-token-")) {
+        const uid = authHeader.replace("Bearer test-token-", "").trim();
+        const user = await prisma.user.findUnique({ where: { id: uid } });
+        if (user) {
+          req.user = user;
+          return next();
+        }
+      }
+    }
+
     const auth = getAuth(req);
     const clerkId = auth.userId;
     

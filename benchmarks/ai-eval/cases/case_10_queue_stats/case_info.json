@@ -2,7 +2,7 @@
   "id": "case_10_queue_stats",
   "title": "Queue throughput division by zero",
   "description": "calculateThroughput divides by zero when elapsed seconds rounds to 0",
-  "target_file": "metrics.ts",
+  "target_file": "metrics.js",
   "target_function": "calculateThroughput",
   "query": "fix queue throughput calculation division by zero when elapsed is zero"
 }

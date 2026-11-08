@@ -69,7 +69,7 @@ def process_indexing_entry(entry_id: str, fields: Dict[str, str], delivery_count
 
     try:
         if event_type == "delete":
-            store.delete_file(file_id)
+            store.delete_file(room_id, file_id)
             logger.info(f"[{request_id}] [fileId={file_id}] Successfully deleted chunks from Qdrant for room '{room_id}'")
         else:
             # File update / insert
