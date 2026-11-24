@@ -1,6 +1,7 @@
 import { Request, Response, NextFunction } from "express";
 import { clerkClient, clerkMiddleware, getAuth } from "@clerk/express";
 import { prisma } from "../lib/prisma";
+import { ensureUser } from "../lib/userProvisioning";
 import { logger } from "./logger";
 import { User } from "@prisma/client";
 
@@ -36,17 +37,8 @@ export const attachUser = async (req: Request, res: Response, next: NextFunction
 
     let user = await prisma.user.findUnique({ where: { id: clerkId } });
     if (!user) {
-      // Fetch user from clerk to get email
-      const clerkUser = await clerkClient.users.getUser(clerkId);
-      const email = clerkUser.emailAddresses[0]?.emailAddress || `${clerkId}@placeholder.com`;
-      
-      user = await prisma.user.create({
-        data: {
-          id: clerkId,
-          email: email,
-          name: clerkUser.firstName ? `${clerkUser.firstName} ${clerkUser.lastName}` : "Unknown User"
-        }
-      });
+      // First request from this Clerk user: create the row (email optional, never a duplicate).
+      user = await ensureUser(prisma, await clerkClient.users.getUser(clerkId));
     }
 
     req.user = user;

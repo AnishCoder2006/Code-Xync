@@ -15,7 +15,6 @@ import { ArrowRight, FlaskConical } from "lucide-react";
 import type { AppAuth, AppUser, AuthModule } from "../lib/auth/types";
 import { Button } from "../components/ui/button";
 import { Field, Input } from "../components/ui/form";
-import { Card } from "../components/ui/display";
 
 const USER_KEY = "codesync:e2e-user";
 const SYNC_KEY = "codesync:e2e-sync-url";
@@ -115,14 +114,9 @@ function TestSignIn({ mode }: { mode: "sign-in" | "sign-up" }) {
   const switchHref = { pathname: signUp ? "/sign-in" : "/sign-up", query: router.query.redirect_url ? { redirect_url: router.query.redirect_url } : {} };
 
   return (
-    <Card className="w-full overflow-hidden rounded-xl shadow-[0_30px_60px_-30px_hsl(var(--foreground)/0.45)]" data-testid="test-sign-in">
-      <div className="p-7 sm:p-8">
-        <h2 className="font-display text-2xl font-semibold tracking-tight">{signUp ? "Create your account" : "Sign in to codexync"}</h2>
-        <p className="mt-1.5 text-sm text-muted-foreground">
-          {signUp ? "This preview uses seeded accounts. Pick one to start a room." : "Welcome back! Choose an account to continue."}
-        </p>
-
-        <div className="mt-6 grid gap-2">
+    <div data-testid="test-sign-in">
+      <div>
+        <div className="grid gap-2">
           {DEMO_USERS.map((u) => (
             <button
               key={u.id}
@@ -158,17 +152,17 @@ function TestSignIn({ mode }: { mode: "sign-in" | "sign-up" }) {
         </form>
       </div>
 
-      <div className="border-t bg-muted/40 px-7 py-4 text-center text-sm text-muted-foreground">
+      <div className="-mx-6 mt-7 border-t bg-muted/40 px-6 py-4 text-center text-sm text-muted-foreground sm:-mx-8">
         {signUp ? "Already have an account? " : "New to codexync? "}
         <Link href={switchHref} className="font-semibold text-foreground underline-offset-4 transition-colors hover:text-brand hover:underline">
           {signUp ? "Sign in" : "Create an account"}
         </Link>
       </div>
-      <p className="flex items-center justify-center gap-1.5 border-t px-7 py-2.5 font-mono text-[10.5px] uppercase tracking-[0.12em] text-muted-foreground">
+      <p className="-mx-6 -mb-6 flex items-center justify-center gap-1.5 border-t px-6 py-2.5 font-mono text-[10.5px] uppercase tracking-[0.12em] text-muted-foreground sm:-mx-8 sm:-mb-7">
         <FlaskConical className="size-3" aria-hidden="true" />
         Preview build · real sign-in uses Clerk
       </p>
-    </Card>
+    </div>
   );
 }
 

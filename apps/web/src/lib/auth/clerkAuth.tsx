@@ -6,30 +6,13 @@ import { useCallback, useMemo, type ReactNode } from "react";
 import { ClerkProvider, SignIn, SignUp, UserButton, useAuth, useUser } from "@clerk/nextjs";
 import type { AppAuth, AuthModule } from "./types";
 import { useColorScheme } from "../util";
+import { clerkAuthAppearance, clerkProviderVariables } from "./clerkAppearance";
 
-// Clerk derives shades from these, so they must be literal colours (mirrors globals.css).
-const CLERK_COLORS = {
-  light: {
-    colorPrimary: "#c2410c",
-    colorTextOnPrimaryBackground: "#ffffff",
-    colorBackground: "#fbfaf6",
-    colorText: "#161513",
-    colorTextSecondary: "#5c574d",
-    colorInputBackground: "#ffffff",
-    colorInputText: "#161513",
-    colorNeutral: "#161513",
-  },
-  dark: {
-    colorPrimary: "#f05a26",
-    colorTextOnPrimaryBackground: "#141210",
-    colorBackground: "#232120",
-    colorText: "#ede9e1",
-    colorTextSecondary: "#b4aea3",
-    colorInputBackground: "#1c1a17",
-    colorInputText: "#ede9e1",
-    colorNeutral: "#ede9e1",
-  },
-} as const;
+// Social buttons show just the provider name so Google and GitHub fit side by side.
+const LOCALIZATION = {
+  socialButtonsBlockButton: "{{provider|titleize}}",
+  socialButtonsBlockButtonManyInView: "{{provider|titleize}}",
+};
 
 function AuthProvider({ children }: { children: ReactNode }) {
   const scheme = useColorScheme();
@@ -40,22 +23,8 @@ function AuthProvider({ children }: { children: ReactNode }) {
       signUpUrl="/sign-up"
       signInFallbackRedirectUrl="/rooms"
       signUpFallbackRedirectUrl="/rooms"
-      appearance={{
-        layout: { socialButtonsPlacement: "top", socialButtonsVariant: "blockButton", logoPlacement: "none" },
-        variables: {
-          ...CLERK_COLORS[scheme],
-          borderRadius: "0.5rem",
-          fontFamily: "var(--font-sans), ui-sans-serif, system-ui, sans-serif",
-          fontSize: "0.9375rem",
-        },
-        elements: {
-          rootBox: "w-full",
-          cardBox: "w-full max-w-none rounded-xl border border-border shadow-[0_30px_60px_-30px_rgba(0,0,0,0.45)]",
-          headerTitle: "font-display text-2xl tracking-tight",
-          formButtonPrimary: "font-semibold normal-case shadow-none",
-          footerActionLink: "font-semibold",
-        },
-      }}
+      localization={LOCALIZATION}
+      appearance={{ variables: clerkProviderVariables(scheme) }}
     >
       {children}
     </ClerkProvider>
@@ -83,11 +52,13 @@ function UserMenu() {
 }
 
 function SignInView() {
-  return <SignIn path="/sign-in" routing="path" signUpUrl="/sign-up" />;
+  const scheme = useColorScheme();
+  return <SignIn path="/sign-in" routing="path" signUpUrl="/sign-up" appearance={clerkAuthAppearance(scheme)} />;
 }
 
 function SignUpView() {
-  return <SignUp path="/sign-up" routing="path" signInUrl="/sign-in" />;
+  const scheme = useColorScheme();
+  return <SignUp path="/sign-up" routing="path" signInUrl="/sign-in" appearance={clerkAuthAppearance(scheme)} />;
 }
 
 const useSyncUrlOverride = (): string | undefined => undefined;

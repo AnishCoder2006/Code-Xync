@@ -4,16 +4,20 @@ import { Wordmark } from "./AppShell";
 
 type Mode = "sign-in" | "sign-up";
 
-const COPY: Record<Mode, { kicker: string; title: ReactNode; body: string }> = {
+const COPY: Record<Mode, { kicker: string; title: ReactNode; body: string; formTitle: string; formSubtitle: string }> = {
   "sign-in": {
     kicker: "Welcome back",
     title: <>Pick up right where your room left off.</>,
     body: "Your files, collaborators, run history and AI fixes are all where you left them.",
+    formTitle: "Sign in to CodeSync",
+    formSubtitle: "Welcome back! Choose how you'd like to continue.",
   },
   "sign-up": {
     kicker: "Create your account",
     title: <>Your first shared room is a minute away.</>,
     body: "Invite someone with a link, decide who edits and who watches, and run the code together.",
+    formTitle: "Create your CodeSync account",
+    formSubtitle: "Start collaborating in under a minute.",
   },
 };
 
@@ -80,12 +84,19 @@ export function AuthLayout({ mode, children }: { mode: Mode; children: ReactNode
         </div>
       </aside>
 
-      <div className="float-in mx-auto flex w-full max-w-[440px] flex-col items-center [--d:120ms]">
+      <div className="float-in mx-auto w-full max-w-[440px] [--d:120ms]">
         <div className="mb-6 text-center lg:hidden">
           <Wordmark className="text-2xl font-semibold" />
           <p className="mt-2 text-sm text-muted-foreground">{c.body}</p>
         </div>
-        {children}
+        {/* One card for every auth form; the form inside (Clerk or the test build's) brings no card of its own. */}
+        <div className="overflow-hidden rounded-xl border bg-card text-card-foreground shadow-[0_30px_60px_-30px_hsl(var(--foreground)/0.45)]">
+          <div className="px-6 pt-7 sm:px-8 sm:pt-8">
+            <h2 className="font-display text-2xl font-semibold tracking-tight">{c.formTitle}</h2>
+            <p className="mt-1.5 text-sm text-muted-foreground">{c.formSubtitle}</p>
+          </div>
+          <div className="px-6 pb-6 pt-6 sm:px-8 sm:pb-7">{children}</div>
+        </div>
       </div>
     </div>
   );

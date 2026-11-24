@@ -22,7 +22,7 @@ enum UserRole {
 
 model User {
   id          String       @id @default(cuid())
-  email       String       @unique
+  email       String?      @unique
   name        String?
   role        UserRole     @default(DEV)
   createdAt   DateTime     @default(now())
