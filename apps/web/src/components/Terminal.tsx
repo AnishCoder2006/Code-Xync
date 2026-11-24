@@ -1,131 +1,138 @@
 import { useEffect, useRef } from "react";
-import { useAuth } from "@clerk/nextjs";
+import { API_URL, SYNC_URL, authHeaders, type GetToken } from "../lib/api";
+
+export type RunEnd = { status: string; code: number | null };
 
 interface TerminalProps {
   roomId: string;
-  jobId: string | null; // null = no active job, panel stays hidden
-  onJobEnd?: () => void;
+  /** Active job; output for it streams in. null = idle (last output stays readable). */
+  jobId: string | null;
+  getToken: GetToken;
+  syncUrl?: string;
+  theme?: "light" | "dark";
+  onEnd?: (end: RunEnd) => void;
 }
 
+const THEMES = {
+  // Match the card surface of the theme (globals.css --card), ink & signal palette.
+  dark: { background: "#1b1a18", foreground: "#ede9e1", cursor: "#1b1a18", selectionBackground: "#3a2a22", red: "#f0605a", green: "#5bbe84", yellow: "#e3b067", blue: "#8ea2f5" },
+  light: { background: "#fbfaf6", foreground: "#161513", cursor: "#fbfaf6", selectionBackground: "#ffd9c7", red: "#c2322e", green: "#2f7d4f", yellow: "#9a5a0c", blue: "#2b4acb" },
+};
+
 /**
- * Streams execution output from Redis Pub/Sub via the Sync WebSocket.
- * The subscription is strictly scoped to the current (roomId, jobId) pair:
- * - Subscribes when jobId becomes non-null
- * - Unsubscribes (and clears the terminal) when jobId goes null or changes
- * This prevents dangling subscriptions from multiple Run clicks.
+ * Streams one execution job's output (Redis pub/sub relayed by the sync service, terminal
+ * mode). Subscribes when jobId changes, tells the API it is listening (/ready rendezvous,
+ * so no early output is lost), and closes on the job's "end" message.
  */
-export function Terminal({ roomId, jobId, onJobEnd }: TerminalProps) {
+export function Terminal({ roomId, jobId, getToken, syncUrl, theme = "dark", onEnd }: TerminalProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const termRef = useRef<any>(null);
   const fitRef = useRef<any>(null);
-  const wsRef = useRef<WebSocket | null>(null);
-  const { getToken } = useAuth();
+  const queueRef = useRef<string[]>([]); // writes before xterm finished loading
+  const onEndRef = useRef(onEnd);
+  onEndRef.current = onEnd;
 
-  // Bootstrap xterm lazily (it uses browser APIs, so must be client-side only)
+  const write = (s: string) => {
+    if (termRef.current) termRef.current.write(s);
+    else queueRef.current.push(s);
+  };
+
   useEffect(() => {
-    let term: any;
-    let fitAddon: any;
-
-    import("@xterm/xterm").then(({ Terminal: XTerm }) => {
-      import("@xterm/addon-fit").then(({ FitAddon }) => {
-        if (!containerRef.current) return;
-        term = new XTerm({ theme: { background: "#1e1e1e" }, fontSize: 13, convertEol: true });
-        fitAddon = new FitAddon();
-        term.loadAddon(fitAddon);
-        term.open(containerRef.current);
-        fitAddon.fit();
-        termRef.current = term;
-        fitRef.current = fitAddon;
+    let disposed = false;
+    let ro: ResizeObserver | null = null;
+    (async () => {
+      const [{ Terminal: XTerm }, { FitAddon }] = await Promise.all([import("@xterm/xterm"), import("@xterm/addon-fit")]);
+      if (disposed || !containerRef.current) return;
+      const term = new XTerm({
+        theme: THEMES[theme],
+        fontSize: 13,
+        fontFamily: "'IBM Plex Mono', 'JetBrains Mono', 'Cascadia Code', Consolas, monospace",
+        convertEol: true,
+        disableStdin: true,
+        cursorBlink: false,
+        scrollback: 5000,
       });
-    });
-
-    const handleResize = () => fitRef.current?.fit();
-    window.addEventListener("resize", handleResize);
-
+      const fit = new FitAddon();
+      term.loadAddon(fit);
+      term.open(containerRef.current);
+      try { fit.fit(); } catch {}
+      termRef.current = term;
+      fitRef.current = fit;
+      queueRef.current.splice(0).forEach((s) => term.write(s));
+      ro = new ResizeObserver(() => { try { fit.fit(); } catch {} });
+      ro.observe(containerRef.current);
+    })();
     return () => {
-      window.removeEventListener("resize", handleResize);
-      term?.dispose();
+      disposed = true;
+      ro?.disconnect();
+      termRef.current?.dispose();
+      termRef.current = null;
     };
-  }, []);
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
-  // Scope the WS subscription to the active jobId
+  useEffect(() => {
+    if (termRef.current) termRef.current.options.theme = THEMES[theme];
+  }, [theme]);
+
   useEffect(() => {
     if (!jobId) return;
+    termRef.current?.clear();
+    termRef.current?.reset();
+    queueRef.current = [];
+    write(`\x1b[2m$ run · job ${jobId.slice(0, 8)}\x1b[0m\r\n`);
 
-    const term = termRef.current;
-    if (term) {
-      term.clear();
-      term.writeln(`\x1b[33m▶ Running job ${jobId}…\x1b[0m`);
-    }
-
-    // Connect to Sync service; send a subscription intent message
-    const syncUrl = (process.env.NEXT_PUBLIC_SYNC_URL || "ws://localhost:4001");
-    const token =
-      typeof window !== "undefined"
-        ? (document.cookie.match(/(?:^|; )__session=([^;]*)/) ?? [])[1] ?? ""
-        : "";
-
-    const ws = new WebSocket(
-      `${syncUrl}?token=${encodeURIComponent(token)}&roomId=${encodeURIComponent(roomId)}&mode=terminal&jobId=${encodeURIComponent(jobId)}`
-    );
-    wsRef.current = ws;
-
-    // ── Signal ready rendezvous to API once WS connection is open ──
-    ws.onopen = async () => {
-      try {
-        const api = process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000";
-        const authToken = (await getToken()) || token;
-        await fetch(`${api}/execution/${jobId}/ready`, {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            Authorization: `Bearer ${authToken}`,
-          },
-        });
-      } catch (err) {
-        console.error("[terminal] failed to send ready signal:", err);
-      }
+    let ended = false;
+    let ws: WebSocket | null = null;
+    let cancelled = false;
+    const finish = (end: RunEnd) => {
+      if (ended) return;
+      ended = true;
+      ws?.close();
+      onEndRef.current?.(end);
     };
 
-    ws.onmessage = (ev) => {
-      try {
-        const msg: { type: string; data?: string; code?: number | null } = JSON.parse(ev.data);
-        if (msg.type === "stdout" && msg.data) term?.write(msg.data);
-        if (msg.type === "stderr" && msg.data) term?.write(`\x1b[31m${msg.data}\x1b[0m`);
-        if (msg.type === "end") {
-          const exitColor = msg.code === 0 ? "\x1b[32m" : "\x1b[31m";
-          term?.writeln(`\n${exitColor}Process exited with code ${msg.code ?? "?"}\x1b[0m`);
-          ws.close();
-          onJobEnd?.();
+    (async () => {
+      const token = (await getToken().catch(() => null)) ?? "";
+      if (cancelled) return;
+      const base = syncUrl || SYNC_URL;
+      ws = new WebSocket(
+        `${base}?token=${encodeURIComponent(token)}&roomId=${encodeURIComponent(roomId)}&mode=terminal&jobId=${encodeURIComponent(jobId)}`
+      );
+      ws.onopen = async () => {
+        try {
+          await fetch(`${API_URL}/execution/${encodeURIComponent(jobId)}/ready`, {
+            method: "POST",
+            headers: await authHeaders(getToken),
+          });
+        } catch {
+          // The worker starts anyway after a short wait; output may then begin mid-stream.
         }
-      } catch {
-        // ignore non-JSON frames (e.g. Yjs binary frames on a shared connection)
-      }
-    };
-
-    ws.onerror = () => term?.writeln("\x1b[31m[WS error]\x1b[0m");
+      };
+      ws.onmessage = (ev) => {
+        let msg: { type: string; data?: string; code?: number | null; status?: string };
+        try { msg = JSON.parse(ev.data); } catch { return; }
+        if (msg.type === "stdout" && msg.data) write(msg.data);
+        else if (msg.type === "stderr" && msg.data) write(`\x1b[31m${msg.data}\x1b[0m`);
+        else if (msg.type === "end") {
+          const ok = msg.code === 0;
+          write(`\r\n\x1b[${ok ? "32" : "31"}m● exited with code ${msg.code ?? "?"}${msg.status && !ok ? ` (${msg.status})` : ""}\x1b[0m\r\n`);
+          finish({ status: msg.status ?? (ok ? "passed" : "failed"), code: msg.code ?? null });
+        }
+      };
+      ws.onerror = () => write("\r\n\x1b[31mLost the connection to the output stream.\x1b[0m\r\n");
+      ws.onclose = () => {
+        if (!ended && !cancelled) finish({ status: "disconnected", code: null });
+      };
+    })();
 
     return () => {
-      // Unsubscribe when jobId changes or component unmounts — prevents dangling subs
-      ws.close();
-      wsRef.current = null;
+      cancelled = true;
+      ended = true;
+      ws?.close();
     };
-  }, [roomId, jobId, onJobEnd]);
+  }, [roomId, jobId]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  if (!jobId) return null;
-
-  return (
-    <div
-      ref={containerRef}
-      style={{
-        height: "220px",
-        background: "#1e1e1e",
-        borderRadius: "4px",
-        overflow: "hidden",
-        marginTop: "8px",
-      }}
-    />
-  );
+  return <div ref={containerRef} className="min-h-0 flex-1 overflow-hidden pl-3 pt-2" data-testid="terminal" />;
 }
 
 export default Terminal;

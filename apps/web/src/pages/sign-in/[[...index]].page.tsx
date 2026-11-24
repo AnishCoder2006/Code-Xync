@@ -1,5 +1,10 @@
-import { SignIn } from "@clerk/nextjs";
+import { SignInView } from "../../lib/auth";
+import { AuthLayout } from "../../components/AuthLayout";
 
 export default function Page() {
-  return <SignIn />;
+  return (
+    <AuthLayout mode="sign-in">
+      <SignInView />
+    </AuthLayout>
+  );
 }

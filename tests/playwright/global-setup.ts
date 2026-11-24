@@ -17,19 +17,25 @@ import { ROOT, WEB_PORT, PORT_NODE1, PORT_NODE2, LB_PORT, startNode, startLB, wa
 
 export const API_PORT = 4050;
 export const E2E_PLACEHOLDER_CLERK_PK = "pk_test_" + Buffer.from("e2e-placeholder.clerk.accounts.dev$").toString("base64");
-const WEB_DIR = path.join(ROOT, "apps/web");
+export const WEB_DIR = path.join(ROOT, "apps/web");
 const E2E_DIST = path.join(WEB_DIR, ".next-e2e");
-const NEXT_BIN = path.join(ROOT, "node_modules/next/dist/bin/next");
-const TSX_CLI = path.join(ROOT, "node_modules/tsx/dist/cli.mjs");
+export const NEXT_BIN = path.join(ROOT, "node_modules/next/dist/bin/next");
+export const TSX_CLI = path.join(ROOT, "node_modules/tsx/dist/cli.mjs");
 
 declare global {
   // eslint-disable-next-line no-var
   var __PW_PROCS: ChildProcess[] | undefined;
 }
 
-const webEnv = () => ({
+// Build-time URLs baked into the E2E bundle (the UI suite's API and sync LB).
+export const E2E_API_URL = `http://127.0.0.1:${API_PORT}`;
+export const E2E_SYNC_URL = `ws://127.0.0.1:${LB_PORT}`;
+
+export const webEnv = () => ({
   ...process.env,
   NEXT_PUBLIC_E2E: "1",
+  NEXT_PUBLIC_API_URL: E2E_API_URL,
+  NEXT_PUBLIC_SYNC_URL: E2E_SYNC_URL,
   NEXT_DIST_DIR: ".next-e2e",
   NEXT_TELEMETRY_DISABLED: "1",
   // One build worker: a parallel build hit "Fatal process out of memory: Zone" on this
@@ -38,7 +44,7 @@ const webEnv = () => ({
   NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY: process.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY || E2E_PLACEHOLDER_CLERK_PK,
 });
 
-async function waitHttp(url: string, label: string, timeoutMs = 60_000) {
+export async function waitHttp(url: string, label: string, timeoutMs = 60_000) {
   const deadline = Date.now() + timeoutMs;
   while (Date.now() < deadline) {
     try {
@@ -50,11 +56,16 @@ async function waitHttp(url: string, label: string, timeoutMs = 60_000) {
   throw new Error(`${label} did not come up at ${url}`);
 }
 
-export default async function globalSetup() {
+/** (Re)build apps/web/.next-e2e when missing or E2E_FORCE_BUILD=1. */
+export function ensureE2EBuild() {
   if (!fs.existsSync(path.join(E2E_DIST, "BUILD_ID")) || process.env.E2E_FORCE_BUILD === "1") {
     console.log("[PW setup] Building web app with NEXT_PUBLIC_E2E=1 into apps/web/.next-e2e ...");
     execSync("npm run build", { cwd: WEB_DIR, env: webEnv(), stdio: "inherit" });
   }
+}
+
+export default async function globalSetup() {
+  ensureE2EBuild();
 
   const procs: ChildProcess[] = [];
   globalThis.__PW_PROCS = procs;

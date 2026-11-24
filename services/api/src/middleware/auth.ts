@@ -1,6 +1,7 @@
 import { Request, Response, NextFunction } from "express";
-import { clerkClient, getAuth } from "@clerk/express";
+import { clerkClient, clerkMiddleware, getAuth } from "@clerk/express";
 import { prisma } from "../lib/prisma";
+import { ensureUser } from "../lib/userProvisioning";
 import { logger } from "./logger";
 import { User } from "@prisma/client";
 
@@ -36,17 +37,8 @@ export const attachUser = async (req: Request, res: Response, next: NextFunction
 
     let user = await prisma.user.findUnique({ where: { id: clerkId } });
     if (!user) {
-      // Fetch user from clerk to get email
-      const clerkUser = await clerkClient.users.getUser(clerkId);
-      const email = clerkUser.emailAddresses[0]?.emailAddress || `${clerkId}@placeholder.com`;
-      
-      user = await prisma.user.create({
-        data: {
-          id: clerkId,
-          email: email,
-          name: clerkUser.firstName ? `${clerkUser.firstName} ${clerkUser.lastName}` : "Unknown User"
-        }
-      });
+      // First request from this Clerk user: create the row (email optional, never a duplicate).
+      user = await ensureUser(prisma, await clerkClient.users.getUser(clerkId));
     }
 
     req.user = user;
@@ -57,7 +49,46 @@ export const attachUser = async (req: Request, res: Response, next: NextFunction
   }
 };
 
-export const requireAuthRole = (allowedRoles: string[]) => {
+const clerk = clerkMiddleware();
+
+/**
+ * Router-level auth for every user-facing API route.
+ * - Unauthenticated requests get 401 JSON (Clerk's deprecated requireAuth() answered
+ *   with a 302 redirect to the sign-in page, which an API client cannot use).
+ * - NODE_ENV=test only: "Authorization: Bearer test-token-<userId>" resolves to that
+ *   user, and a user already attached by a test harness is kept. Never active otherwise.
+ * - Otherwise: Clerk session (cookie or bearer) -> getAuth() -> attachUser.
+ */
+export const authenticate = async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    if (process.env.NODE_ENV === "test") {
+      if (req.user) return next();
+      const authHeader = req.get("authorization");
+      if (authHeader?.startsWith("Bearer test-token-")) {
+        const uid = authHeader.slice("Bearer test-token-".length).trim();
+        const user = await prisma.user.findUnique({ where: { id: uid } });
+        if (!user) return res.status(401).json({ error: "Unauthorized" });
+        req.user = user;
+        return next();
+      }
+      // Tests run without Clerk keys; nothing else can authenticate.
+      if (!process.env.CLERK_SECRET_KEY) return res.status(401).json({ error: "Unauthorized" });
+    }
+
+    clerk(req, res, (err?: unknown) => {
+      if (err) return next(err);
+      if (!getAuth(req).userId) {
+        logger.warn({ path: req.path }, "Unauthenticated request rejected");
+        return res.status(401).json({ error: "Unauthorized" });
+      }
+      attachUser(req, res, next);
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+export const requireAuthRole =(allowedRoles: string[]) => {
   return async (req: Request, res: Response, next: NextFunction) => {
     if (!req.user) {
       logger.warn({ path: req.path }, "Unauthenticated request rejected");

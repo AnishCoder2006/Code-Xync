@@ -2,11 +2,11 @@ import { Router, Request, Response } from "express";
 import { Queue } from "bullmq";
 import Redis from "ioredis";
 import { v4 as uuidv4 } from "uuid";
-import { requireAuth } from "@clerk/express";
-import { attachUser } from "../middleware/auth";
+import { authenticate } from "../middleware/auth";
 import { logger } from "../middleware/logger";
 import { prisma } from "../lib/prisma";
 import { executionRateLimiter, sandboxRateLimiter } from "../middleware/rateLimit";
+import { isRunnable } from "../lib/languages";
 
 const router = Router();
 const redisUrl = process.env.REDIS_URL || "redis://localhost:6380";
@@ -56,6 +56,9 @@ router.post("/sandbox", verifyInternalAuth, sandboxRateLimiter, async (req: Requ
     const { roomId, files, command, language } = req.body;
     if (!files || !command || !language) {
       return res.status(400).json({ error: "Missing required fields: files, command, language" });
+    }
+    if (!isRunnable(language) && language !== "sh") {
+      return res.status(400).json({ error: `Running ${language} code is not supported.` });
     }
 
     const payloadStr = JSON.stringify(files);
@@ -115,21 +118,16 @@ router.post("/sandbox", verifyInternalAuth, sandboxRateLimiter, async (req: Requ
   }
 });
 
-if (process.env.NODE_ENV === "test") {
-  router.use((req: Request, res: Response, next: import("express").NextFunction) => {
-    if (req.user) return next();
-    return requireAuth()(req, res, () => attachUser(req, res, next));
-  });
-} else {
-  router.use(requireAuth());
-  router.use(attachUser);
-}
+router.use(authenticate);
 
 router.post("/", executionRateLimiter, async (req: Request, res: Response) => {
   try {
     const { roomId, code, language } = req.body;
     if (!roomId || !code || !language) {
       return res.status(400).json({ error: "Missing required fields: roomId, code, language" });
+    }
+    if (!isRunnable(language) && language !== "sh") {
+      return res.status(400).json({ error: `Running ${language} code is not supported yet.` });
     }
 
     if (!req.user) {

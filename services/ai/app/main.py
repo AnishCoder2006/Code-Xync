@@ -3,6 +3,7 @@ AI service entrypoint — indexing, retrieval, and the verified fix loop.
 See design doc sections 4 and 5.
 """
 
+import os
 from contextlib import asynccontextmanager
 from fastapi import FastAPI
 from app.routes.search import router as search_router
@@ -24,7 +25,7 @@ app = FastAPI(title="CodeSync AI Service", lifespan=lifespan)
 
 @app.get("/health")
 def health():
-    return {"ok": True, "service": "codesync-ai"}
+    return {"ok": True, "service": "codesync-ai", "llm_provider": os.getenv("LLM_PROVIDER", "mock")}
 
 
 app.include_router(search_router)

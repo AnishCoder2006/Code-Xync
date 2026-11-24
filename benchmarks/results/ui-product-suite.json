@@ -1,0 +1,316 @@
+{
+ "name": "ui-product-suite",
+ "title": "Product UI suite (plan Part 2), consecutive runs (flakiness check)",
+ "timestamp": "2026-11-24T15:20:36.733Z",
+ "git": {
+  "commit": null,
+  "commit_note": "branch main has no commits yet; numbers come from the uncommitted working tree",
+  "last_pushed_commit": null,
+  "uncommitted_paths": null,
+  "source_digest": "4f270fadf7893093",
+  "source_digest_dirs": [
+   "tests/playwright",
+   "apps/web/src",
+   "services/api/src",
+   "services/sync/src",
+   "services/ai/app"
+  ]
+ },
+ "environment": {
+  "os": "Windows_NT 10.0.26200 (win32 x64)",
+  "cpu": "Intel(R) Core(TM) Ultra 5 125H",
+  "logical_cpus": 18,
+  "ram_gib": 15.4,
+  "node": "v22.15.1",
+  "docker": null,
+  "docker_desktop_note": "Docker Desktop on Windows: containers run in the WSL2 VM; Redis/Postgres/Qdrant and sandboxes cross the Windows<->VM boundary",
+  "load_generator_shares_machine": true,
+  "memory_at_start": {
+   "available_mib": null,
+   "note": "counters unavailable"
+  }
+ },
+ "conditions": {
+  "what": "tests/playwright ui-*.spec.ts: Chromium on the real pages (/, /rooms, /room/[id]) of a NEXT_PUBLIC_E2E=1 build (test auth swapped in at build time)",
+  "topology": "2 sync nodes + Node LB, API (NODE_ENV=test, CORS), AI service (LLM_PROVIDER=mock_scenario), worker with the hardened Docker sandbox",
+  "retries": 0,
+  "workers": 1,
+  "consecutive_runs": 3
+ },
+ "protocol": "suite run back to back; no warm-up (pass/fail check)",
+ "runs": [
+  {
+   "run": 1,
+   "exit_code": 1,
+   "total": 14,
+   "passed": 0,
+   "failed": 7,
+   "flaky": 0,
+   "skipped": 7,
+   "duration_s": 21.5,
+   "tests": [
+    {
+     "title": "ui-ai.spec.ts › progress steps in order, diff, Accept updates both editors on two nodes",
+     "status": "unexpected",
+     "duration_ms": 3
+    },
+    {
+     "title": "ui-ai.spec.ts › stale patch: file edited while the AI worked -> regenerate message",
+     "status": "unexpected",
+     "duration_ms": 0
+    },
+    {
+     "title": "ui-dashboard.spec.ts › signed-out: landing page, and /rooms redirects to sign-in",
+     "status": "unexpected",
+     "duration_ms": 0
+    },
+    {
+     "title": "ui-dashboard.spec.ts › create a room, see it listed, second user joins with the passcode",
+     "status": "skipped",
+     "duration_ms": 0
+    },
+    {
+     "title": "ui-presence.spec.ts › avatars and remote cursor between two browsers; avatar leaves with the user",
+     "status": "unexpected",
+     "duration_ms": 0
+    },
+    {
+     "title": "ui-run.spec.ts › Run shows the program output and exit code",
+     "status": "unexpected",
+     "duration_ms": 0
+    },
+    {
+     "title": "ui-run.spec.ts › rate limited: 429 shows when to retry and blocks the button",
+     "status": "skipped",
+     "duration_ms": 0
+    },
+    {
+     "title": "ui-tools.spec.ts › history shows a run; activity page lists it",
+     "status": "unexpected",
+     "duration_ms": 0
+    },
+    {
+     "title": "ui-tools.spec.ts › owner demotes an editor: their open editor turns read-only without a reload",
+     "status": "skipped",
+     "duration_ms": 0
+    },
+    {
+     "title": "ui-tools.spec.ts › search finds code after it is typed, and jumps to it",
+     "status": "skipped",
+     "duration_ms": 0
+    },
+    {
+     "title": "ui-tools.spec.ts › system page: all services healthy, both sync nodes listed",
+     "status": "skipped",
+     "duration_ms": 0
+    },
+    {
+     "title": "ui-tools.spec.ts › benchmarks page shows the recorded results, signed out",
+     "status": "skipped",
+     "duration_ms": 0
+    },
+    {
+     "title": "ui-tools.spec.ts › languages: a Ruby room runs; a Go room is edit-only with a reason",
+     "status": "skipped",
+     "duration_ms": 0
+    },
+    {
+     "title": "ui-viewer.spec.ts › viewer is read-only; Run and AI disabled with a reason",
+     "status": "unexpected",
+     "duration_ms": 0
+    }
+   ]
+  },
+  {
+   "run": 2,
+   "exit_code": 3221225794,
+   "total": 14,
+   "passed": 0,
+   "failed": 7,
+   "flaky": 0,
+   "skipped": 7,
+   "duration_s": 21.5,
+   "tests": [
+    {
+     "title": "ui-ai.spec.ts › progress steps in order, diff, Accept updates both editors on two nodes",
+     "status": "unexpected",
+     "duration_ms": 3
+    },
+    {
+     "title": "ui-ai.spec.ts › stale patch: file edited while the AI worked -> regenerate message",
+     "status": "unexpected",
+     "duration_ms": 0
+    },
+    {
+     "title": "ui-dashboard.spec.ts › signed-out: landing page, and /rooms redirects to sign-in",
+     "status": "unexpected",
+     "duration_ms": 0
+    },
+    {
+     "title": "ui-dashboard.spec.ts › create a room, see it listed, second user joins with the passcode",
+     "status": "skipped",
+     "duration_ms": 0
+    },
+    {
+     "title": "ui-presence.spec.ts › avatars and remote cursor between two browsers; avatar leaves with the user",
+     "status": "unexpected",
+     "duration_ms": 0
+    },
+    {
+     "title": "ui-run.spec.ts › Run shows the program output and exit code",
+     "status": "unexpected",
+     "duration_ms": 0
+    },
+    {
+     "title": "ui-run.spec.ts › rate limited: 429 shows when to retry and blocks the button",
+     "status": "skipped",
+     "duration_ms": 0
+    },
+    {
+     "title": "ui-tools.spec.ts › history shows a run; activity page lists it",
+     "status": "unexpected",
+     "duration_ms": 0
+    },
+    {
+     "title": "ui-tools.spec.ts › owner demotes an editor: their open editor turns read-only without a reload",
+     "status": "skipped",
+     "duration_ms": 0
+    },
+    {
+     "title": "ui-tools.spec.ts › search finds code after it is typed, and jumps to it",
+     "status": "skipped",
+     "duration_ms": 0
+    },
+    {
+     "title": "ui-tools.spec.ts › system page: all services healthy, both sync nodes listed",
+     "status": "skipped",
+     "duration_ms": 0
+    },
+    {
+     "title": "ui-tools.spec.ts › benchmarks page shows the recorded results, signed out",
+     "status": "skipped",
+     "duration_ms": 0
+    },
+    {
+     "title": "ui-tools.spec.ts › languages: a Ruby room runs; a Go room is edit-only with a reason",
+     "status": "skipped",
+     "duration_ms": 0
+    },
+    {
+     "title": "ui-viewer.spec.ts › viewer is read-only; Run and AI disabled with a reason",
+     "status": "unexpected",
+     "duration_ms": 0
+    }
+   ]
+  },
+  {
+   "run": 3,
+   "exit_code": 3221225794,
+   "total": 14,
+   "passed": 0,
+   "failed": 7,
+   "flaky": 0,
+   "skipped": 7,
+   "duration_s": 21.5,
+   "tests": [
+    {
+     "title": "ui-ai.spec.ts › progress steps in order, diff, Accept updates both editors on two nodes",
+     "status": "unexpected",
+     "duration_ms": 3
+    },
+    {
+     "title": "ui-ai.spec.ts › stale patch: file edited while the AI worked -> regenerate message",
+     "status": "unexpected",
+     "duration_ms": 0
+    },
+    {
+     "title": "ui-dashboard.spec.ts › signed-out: landing page, and /rooms redirects to sign-in",
+     "status": "unexpected",
+     "duration_ms": 0
+    },
+    {
+     "title": "ui-dashboard.spec.ts › create a room, see it listed, second user joins with the passcode",
+     "status": "skipped",
+     "duration_ms": 0
+    },
+    {
+     "title": "ui-presence.spec.ts › avatars and remote cursor between two browsers; avatar leaves with the user",
+     "status": "unexpected",
+     "duration_ms": 0
+    },
+    {
+     "title": "ui-run.spec.ts › Run shows the program output and exit code",
+     "status": "unexpected",
+     "duration_ms": 0
+    },
+    {
+     "title": "ui-run.spec.ts › rate limited: 429 shows when to retry and blocks the button",
+     "status": "skipped",
+     "duration_ms": 0
+    },
+    {
+     "title": "ui-tools.spec.ts › history shows a run; activity page lists it",
+     "status": "unexpected",
+     "duration_ms": 0
+    },
+    {
+     "title": "ui-tools.spec.ts › owner demotes an editor: their open editor turns read-only without a reload",
+     "status": "skipped",
+     "duration_ms": 0
+    },
+    {
+     "title": "ui-tools.spec.ts › search finds code after it is typed, and jumps to it",
+     "status": "skipped",
+     "duration_ms": 0
+    },
+    {
+     "title": "ui-tools.spec.ts › system page: all services healthy, both sync nodes listed",
+     "status": "skipped",
+     "duration_ms": 0
+    },
+    {
+     "title": "ui-tools.spec.ts › benchmarks page shows the recorded results, signed out",
+     "status": "skipped",
+     "duration_ms": 0
+    },
+    {
+     "title": "ui-tools.spec.ts › languages: a Ruby room runs; a Go room is edit-only with a reason",
+     "status": "skipped",
+     "duration_ms": 0
+    },
+    {
+     "title": "ui-viewer.spec.ts › viewer is read-only; Run and AI disabled with a reason",
+     "status": "unexpected",
+     "duration_ms": 0
+    }
+   ]
+  }
+ ],
+ "summary": {
+  "all_passed": false,
+  "runs": [
+   {
+    "run": 1,
+    "exit_code": 1,
+    "passed": 0,
+    "failed": 7,
+    "flaky": 0
+   },
+   {
+    "run": 2,
+    "exit_code": 3221225794,
+    "passed": 0,
+    "failed": 7,
+    "flaky": 0
+   },
+   {
+    "run": 3,
+    "exit_code": 3221225794,
+    "passed": 0,
+    "failed": 7,
+    "flaky": 0
+   }
+  ]
+ },
+ "notes": []
+}

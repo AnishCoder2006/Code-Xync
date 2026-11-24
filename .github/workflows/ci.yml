@@ -121,8 +121,10 @@ jobs:
         run: npm ci
       - name: Build sandbox images
         run: |
-          docker build -f infra/docker/sandbox-images/node.Dockerfile -t codesync-sandbox-node .
-          docker build -f infra/docker/sandbox-images/python.Dockerfile -t codesync-sandbox-python .
+          # One image per runnable language (services/worker/src/sandbox/languages.ts).
+          for lang in node python typescript ruby php scripts java; do
+            docker build -f infra/docker/sandbox-images/$lang.Dockerfile -t codesync-sandbox-$lang infra/docker/sandbox-images
+          done
       - name: Apply migrations
         env:
           DATABASE_URL: postgresql://postgres:postgres@localhost:5432/codesync

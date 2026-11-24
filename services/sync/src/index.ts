@@ -32,6 +32,7 @@ import * as decoding from "lib0/decoding";
 import Redis from "ioredis";
 import * as urlModule from "url";
 import { authenticateSocket } from "./socketAuth";
+import { wholeLineOccurrences } from "./rangeMatch";
 import { NODE_ID, PORT, log, logErr } from "./node";
 import {
   initRelay,
@@ -60,6 +61,10 @@ const startedAt = Date.now();
 
 const MESSAGE_SYNC = 0;
 const MESSAGE_AWARENESS = 1;
+// y-protocols/sync sub-types: step1 = request (read), step2 / update = write.
+const SYNC_STEP1 = 0;
+/** Document writes dropped because the sender's role is VIEWER (plan step 2.5). */
+const viewerStats = { droppedUpdates: 0 };
 
 /** Origin used when a disconnecting client's awareness is removed (published). */
 const ORIGIN_CLIENT_CLOSE = "client-close";
@@ -247,6 +252,8 @@ const server = http.createServer(async (req, res) => {
       uptimeMs: Date.now() - startedAt,
       relay: relayStats,
       persistence: persistStats,
+      viewer: viewerStats,
+      control: controlStats,
     };
     if (authed) {
       const roomDetails: Record<string, { clients: number }> = {};
@@ -296,7 +303,8 @@ const server = http.createServer(async (req, res) => {
       room.doc.transact(() => {
         const currentText = ytext.toString();
         if (oldRangeText) {
-          const occurrences = currentText.split(oldRangeText).length - 1;
+          const matches = wholeLineOccurrences(currentText, oldRangeText);
+          const occurrences = matches.length;
           if (occurrences === 0) {
             txStatus.error = { status: 409, message: "Target code range not found in current document" };
             return;
@@ -308,7 +316,7 @@ const server = http.createServer(async (req, res) => {
             };
             return;
           }
-          const actualOffset = currentText.indexOf(oldRangeText);
+          const actualOffset = matches[0];
           ytext.delete(actualOffset, oldRangeText.length);
           if (newCode && newCode.length > 0) ytext.insert(actualOffset, newCode);
         } else {
@@ -366,6 +374,31 @@ server.on("upgrade", async (request, socket, head) => {
   }
 });
 
+// ── Permission changes (role changed / member removed) ─────────────────────
+// Roles are checked when a socket connects. When the API changes a member's role or
+// removes them it publishes {roomId, userId} on SYNC_CONTROL_CHANNEL; every node closes
+// that user's sockets in that room (code 4001). y-websocket reconnects at once and the
+// upgrade handler checks the NEW role (or refuses a removed member).
+export const SYNC_CONTROL_CHANNEL = "sync:control";
+const socketOwners = new Map<WebSocket, { userId: string; roomId: string }>();
+export const controlStats = { reauthRequests: 0, socketsClosedForReauth: 0 };
+const control = new Redis(process.env.REDIS_URL || "redis://localhost:6380", { maxRetriesPerRequest: null });
+control.on("error", () => {});
+control.subscribe(SYNC_CONTROL_CHANNEL).catch((err) => logErr("control channel subscribe failed:", err));
+control.on("message", (channel, raw) => {
+  if (channel !== SYNC_CONTROL_CHANNEL) return;
+  let msg: { type?: string; roomId?: string; userId?: string };
+  try { msg = JSON.parse(raw); } catch { return; }
+  if (msg.type !== "reauth" || !msg.roomId || !msg.userId) return;
+  controlStats.reauthRequests++;
+  socketOwners.forEach((owner, ws) => {
+    if (owner.roomId === msg.roomId && owner.userId === msg.userId) {
+      controlStats.socketsClosedForReauth++;
+      ws.close(4001, "permissions changed");
+    }
+  });
+});
+
 function handleTerminal(ws: WebSocket, roomId: string, jobId: string | undefined) {
   if (!jobId) {
     ws.close(4000, "Missing jobId for terminal");
@@ -395,8 +428,9 @@ function handleTerminal(ws: WebSocket, roomId: string, jobId: string | undefined
   ws.on("error", cleanup);
 }
 
-wss.on("connection", (ws: WebSocket, request: http.IncomingMessage, clientInfo: { userId: string; roomId: string }) => {
-  const { roomId, userId } = clientInfo;
+wss.on("connection", (ws: WebSocket, request: http.IncomingMessage, clientInfo: { userId: string; roomId: string; role: string }) => {
+  const { roomId, userId, role } = clientInfo;
+  const readOnly = role === "VIEWER";
   const parsedUrl = urlModule.parse(request.url || "", true);
   if (parsedUrl.query.mode === "terminal") {
     handleTerminal(ws, roomId, parsedUrl.query.jobId as string | undefined);
@@ -404,6 +438,7 @@ wss.on("connection", (ws: WebSocket, request: http.IncomingMessage, clientInfo: 
   }
 
   log(`Connection from user ${userId} for room ${roomId}`);
+  socketOwners.set(ws, { userId, roomId });
   ws.on("error", (err) => logErr(`socket error (${userId}):`, err.message));
 
   // Buffer frames until the room is loaded so nothing the client sends early is lost.
@@ -417,6 +452,12 @@ wss.on("connection", (ws: WebSocket, request: http.IncomingMessage, clientInfo: 
       const decoder = decoding.createDecoder(data);
       const msgType = decoding.readVarUint(decoder);
       if (msgType === MESSAGE_SYNC) {
+        // Viewers may read (step1 -> we answer with step2) but never write: their
+        // step2/update frames are dropped here, whatever the client UI does.
+        if (readOnly && decoding.peekVarUint(decoder) !== SYNC_STEP1) {
+          viewerStats.droppedUpdates++;
+          return;
+        }
         const encoder = encoding.createEncoder();
         encoding.writeVarUint(encoder, MESSAGE_SYNC);
         // Applies step2/update frames with `ws` as origin -> onDocUpdate relays them.
@@ -438,6 +479,7 @@ wss.on("connection", (ws: WebSocket, request: http.IncomingMessage, clientInfo: 
 
   ws.on("close", () => {
     closed = true;
+    socketOwners.delete(ws);
     if (!room) return;
     const r = room;
     r.clients.delete(ws);

@@ -16,7 +16,72 @@ from dataclasses import dataclass
 from typing import Optional, Tuple, Dict, Any
 import tree_sitter_languages
 
-from app.rag.chunker import _get_parser
+from app.rag.chunker import _get_parser as _rag_parser
+from app.agent.languages import FUNCTION_NODE_TYPES, normalize
+
+
+def _get_parser(language: str):
+    """Parser for the fix loop: the RAG chunker's for python/js/ts (unchanged), the plain
+    tree-sitter grammar for the other AI languages (java, ruby, php, perl, lua, bash)."""
+    lang = normalize(language)
+    if lang in ("python", "javascript", "typescript"):
+        return _rag_parser(lang)
+    if lang in FUNCTION_NODE_TYPES:
+        return tree_sitter_languages.get_parser(lang), lang
+    return None, lang
+
+
+_LUA_TOKEN = re.compile(
+    r"--\[(=*)\[.*?\]\1\]"          # long comment
+    r"|--[^\n]*"                    # line comment
+    r"|\[(=*)\[.*?\]\2\]"           # long string
+    r"|\"(?:\\.|[^\"\\\n])*\""      # "string"
+    r"|'(?:\\.|[^'\\\n])*'"         # 'string'
+    r"|\b(function|if|do|repeat|end|until)\b",
+    re.S,
+)
+
+
+def _lua_function_range(content: str, function_name: str):
+    """
+    Lua without tree-sitter: the bundled Lua grammar gives nondeterministic error trees
+    (some parses fail on valid code), so blocks are matched by keyword instead.
+    Openers: function, if, do (for/while bodies), repeat; closers: end, until.
+    Strings and comments are skipped. Returns (start_byte, end_byte, start_line, end_line, text).
+    """
+    head = re.compile(
+        rf"^[ \t]*(?:local[ \t]+)?function[ \t]+(?:[\w.]+[.:])?{re.escape(function_name)}[ \t]*\(",
+        re.M,
+    )
+    m = head.search(content)
+    if not m:
+        return None
+    start = m.start() + (len(m.group(0)) - len(m.group(0).lstrip(" \t")))
+    depth = 0
+    for tok in _LUA_TOKEN.finditer(content, start):
+        word = tok.group(3)
+        if not word:
+            continue  # string or comment
+        if word in ("function", "if", "do", "repeat"):
+            depth += 1
+        elif word in ("end", "until"):
+            depth -= 1
+            if depth == 0:
+                end = tok.end()
+                if word == "until":  # `until <expr>` runs to the end of the line
+                    nl = content.find("\n", end)
+                    end = len(content) if nl == -1 else nl
+                text = content[start:end]
+                prefix = content[:start]
+                start_b = len(prefix.encode("utf-8"))
+                return (start_b, start_b + len(text.encode("utf-8")),
+                        prefix.count("\n") + 1, prefix.count("\n") + text.count("\n") + 1, text)
+    return None
+
+
+def _name_matches(found: str, wanted: str) -> bool:
+    """Exact name, or the last part of a qualified one (Lua `M.div` / `M:div`)."""
+    return found == wanted or re.split(r"[.:]", found)[-1] == wanted
 
 
 @dataclass
@@ -46,6 +111,12 @@ def find_function_range(
     content_bytes = content.encode("utf-8")
     parser, norm_lang = _get_parser(language)
 
+    if norm_lang == "lua":
+        found = _lua_function_range(content, function_name)
+        if found:
+            return found
+        raise ValueError(f"Function '{function_name}' not found in source code")
+
     target_node = None
     target_orig_text = ""
 
@@ -68,10 +139,10 @@ def find_function_range(
                                 target_node = node  # include decorators in replacement
                                 return
 
-                # Standard function / method definition
-                if node.type in ("function_definition", "function_declaration", "method_definition"):
+                # Standard function / method definition (node types per language)
+                if node.type in FUNCTION_NODE_TYPES.get(norm_lang, ("function_definition", "function_declaration", "method_definition")):
                     name_child = node.child_by_field_name("name")
-                    if name_child and name_child.text.decode("utf-8") == function_name:
+                    if name_child and _name_matches(name_child.text.decode("utf-8"), function_name):
                         # If wrapped by decorated_definition, prefer outer
                         if node.parent and node.parent.type == "decorated_definition":
                             target_node = node.parent
@@ -80,7 +151,7 @@ def find_function_range(
                         return
 
                 # TypeScript / JS variable declarator with arrow function
-                if node.type in ("variable_declarator", "lexical_declaration"):
+                if norm_lang in ("javascript", "typescript") and node.type in ("variable_declarator", "lexical_declaration"):
                     name_child = node.child_by_field_name("name")
                     if name_child and name_child.text.decode("utf-8") == function_name:
                         target_node = node

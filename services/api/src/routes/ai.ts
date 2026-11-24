@@ -1,26 +1,83 @@
 import { Router, Request, Response } from "express";
-import { requireAuth } from "@clerk/express";
-import { attachUser } from "../middleware/auth";
+import { authenticate } from "../middleware/auth";
 import { logger } from "../middleware/logger";
 import { prisma } from "../lib/prisma";
+import { wholeLineOccurrences } from "../lib/rangeMatch";
+import { isAiFixable } from "../lib/languages";
+import {
+  bindProgressId,
+  getProgressOwner,
+  isTerminal,
+  isValidProgressId,
+  publishProgress,
+  subscribeProgress,
+} from "../lib/aiProgress";
 
 const router = Router();
 const INTERNAL_SECRET = process.env.INTERNAL_API_SECRET || "codesync-internal-ai-secret";
 
-router.use(async (req: Request, res: Response, next: import("express").NextFunction) => {
-  if (process.env.NODE_ENV === "test") {
-    if (req.user) return next();
-    const authHeader = req.get("authorization");
-    if (authHeader && authHeader.startsWith("Bearer test-token-")) {
-      const uid = authHeader.replace("Bearer test-token-", "").trim();
-      const user = await prisma.user.findUnique({ where: { id: uid } });
-      if (user) {
-        req.user = user;
-        return next();
-      }
-    }
+router.use(authenticate);
+
+/**
+ * GET /ai/progress/:progressId?roomId=<roomId>
+ * Server-sent events with the steps of one fix run (context, generating, applying,
+ * testing, retrying, done | failed). The client picks progressId (a UUID), opens this
+ * stream, then sends the same progressId with POST /ai/fix. Events already published
+ * are replayed, so a late subscriber still sees every step in order. The stream ends
+ * after the terminal event. Requires room membership; a progressId already bound to a
+ * different room or user is refused.
+ */
+router.get("/progress/:progressId", async (req: Request, res: Response) => {
+  const { progressId } = req.params;
+  const roomId = typeof req.query.roomId === "string" ? req.query.roomId : "";
+  if (!isValidProgressId(progressId)) return res.status(400).json({ error: "progressId must be a UUID" });
+  if (!roomId) return res.status(400).json({ error: "roomId query parameter required" });
+  if (!req.user) return res.status(401).json({ error: "Unauthorized" });
+
+  const membership = await prisma.roomMember.findUnique({
+    where: { roomId_userId: { roomId, userId: req.user.id } },
+  });
+  if (!membership) return res.status(403).json({ error: "Forbidden: You are not a member of this room" });
+
+  const owner = await getProgressOwner(progressId);
+  if (owner && (owner.roomId !== roomId || owner.userId !== req.user.id)) {
+    return res.status(403).json({ error: "Forbidden: progressId belongs to another request" });
   }
-  return requireAuth()(req, res, () => attachUser(req, res, next));
+
+  res.status(200).set({
+    "Content-Type": "text/event-stream",
+    "Cache-Control": "no-cache, no-transform",
+    Connection: "keep-alive",
+    "X-Accel-Buffering": "no", // Nginx: do not buffer the stream
+  });
+  res.flushHeaders();
+
+  let closed = false;
+  const heartbeat = setInterval(() => res.write(": ping\n\n"), 15000);
+  const maxLife = setTimeout(() => finish(), 10 * 60 * 1000);
+  let unsubscribe: () => Promise<void> = async () => {};
+  const finish = () => {
+    if (closed) return;
+    closed = true;
+    clearInterval(heartbeat);
+    clearTimeout(maxLife);
+    unsubscribe().catch(() => {});
+    res.end();
+  };
+  req.on("close", finish);
+
+  try {
+    unsubscribe = await subscribeProgress(progressId, (event) => {
+      if (closed) return;
+      res.write(`id: ${event.seq}\nevent: progress\ndata: ${JSON.stringify(event)}\n\n`);
+      if (isTerminal(event)) finish();
+    });
+    if (closed) await unsubscribe();
+    else res.write(`event: ready\ndata: {}\n\n`);
+  } catch (err) {
+    logger.error({ err, progressId }, "Progress subscription failed");
+    finish();
+  }
 });
 
 /**
@@ -89,9 +146,18 @@ router.post("/search", async (req: Request, res: Response) => {
  */
 router.post("/fix", async (req: Request, res: Response) => {
   let interaction: any = null;
+  let progressId: string | undefined;
   try {
     const { roomId, code, prompt, language, filePath, testCommand, extraFiles } = req.body;
     if (!roomId || !code || !prompt) return res.status(400).json({ error: "Missing fields" });
+    if (language !== undefined && !isAiFixable(language)) {
+      return res.status(400).json({ error: `AI fixes are not available for ${language} yet.` });
+    }
+    if (req.body.progressId !== undefined) {
+      if (!isValidProgressId(req.body.progressId)) {
+        return res.status(400).json({ error: "progressId must be a UUID" });
+      }
+    }
 
     // Code size cap (100 KB)
     if (Buffer.byteLength(code, "utf8") > 100 * 1024) {
@@ -154,6 +220,13 @@ router.post("/fix", async (req: Request, res: Response) => {
       return res.status(429).json({ error: "Daily AI interaction quota exceeded" });
     }
 
+    // ── Progress stream binding (optional) ────────────────────────────────
+    if (req.body.progressId) {
+      const bound = await bindProgressId(req.body.progressId, roomId, req.user.id);
+      if (!bound) return res.status(409).json({ error: "progressId already used by another request" });
+      progressId = req.body.progressId;
+    }
+
     // ── Capture the current Yjs state vector as the base version ──────────
     // This is used later in PATCH /:id/accept to detect concurrent edits.
     const syncServiceUrl = process.env.SYNC_SERVICE_URL || "http://localhost:4001";
@@ -199,6 +272,7 @@ router.post("/fix", async (req: Request, res: Response) => {
         base_version: baseVersion,
         test_command: testCommand || [],
         extra_files: extraFiles || req.body.extra_files || {},
+        progress_id: progressId,
       }),
     });
 
@@ -230,6 +304,8 @@ router.post("/fix", async (req: Request, res: Response) => {
       data: {
         status: data.status,
         diffPatch: data.patch,   // unified diff; stored for Accept replay
+        attempts: typeof data.llm_calls === "number" ? data.llm_calls : undefined,
+        costUsd: typeof data.total_cost_usd === "number" ? data.total_cost_usd : undefined,
       },
     });
 
@@ -238,6 +314,12 @@ router.post("/fix", async (req: Request, res: Response) => {
 
   } catch (err) {
     logger.error({ err }, "Failed AI fix request");
+    if (progressId) {
+      // The AI service may have died before its own terminal event; never leave a
+      // subscriber waiting. publishProgress skips this if a terminal event exists.
+      await publishProgress(progressId, { step: "failed", message: "AI service request failed" }, { onlyIfOpen: true })
+        .catch(() => {});
+    }
     if (interaction?.id) {
       await prisma.aIInteraction.update({
         where: { id: interaction.id },
@@ -315,7 +397,7 @@ router.patch("/:id/accept", async (req: Request, res: Response) => {
         return res.status(503).json({ error: "Sync service returned null document content" });
       }
 
-      const occurrences = currentContent.split(oldRangeText).length - 1;
+      const occurrences = wholeLineOccurrences(currentContent, oldRangeText).length;
       if (occurrences === 0 || occurrences > 1) {
         await prisma.aIInteraction.update({
           where: { id: req.params.id },

@@ -7,11 +7,15 @@ if (process.env.NODE_ENV === "test" && process.env.CLERK_SECRET_KEY?.startsWith(
 
 import express from "express";
 import { loggerMiddleware, logger } from "./middleware/logger";
+import { corsMiddleware } from "./middleware/cors";
 import roomsRouter from "./routes/rooms";
 import executionRouter from "./routes/execution";
 import aiRouter from "./routes/ai";
+import meRouter from "./routes/me";
+import statusRouter from "./routes/status";
 
 const app = express();
+app.use(corsMiddleware());
 app.use(express.json());
 app.use(loggerMiddleware);
 
@@ -20,6 +24,8 @@ app.get("/health", (_req, res) => res.json({ ok: true }));
 app.use("/rooms", roomsRouter);
 app.use("/execution", executionRouter);
 app.use("/ai", aiRouter);
+app.use("/me", meRouter);
+app.use("/status", statusRouter);
 app.use("/search", aiRouter);
 
 const port = process.env.API_PORT ?? 4000;

@@ -7,6 +7,7 @@ import Redis from "ioredis";
 import { SANDBOX_LIMITS } from "./limits";
 import { hardeningArgs } from "./hardening";
 import { warmPool } from "./warmPool";
+import { runSpecFor } from "./languages";
 import { prisma } from "../lib/prisma";
 
 const execFileAsync = promisify(execFile);
@@ -82,10 +83,19 @@ export const runInDocker = async (
     // Ignore error if container doesn't exist
   }
 
+  const spec = runSpecFor(language);
+  if (!spec) {
+    // The API validates languages before enqueueing; this only guards direct queue use.
+    const msg = `Running ${language} code is not supported.
+`;
+    await redis.publish(channel, JSON.stringify({ type: "stderr", data: msg }));
+    await redis.publish(channel, JSON.stringify({ type: "end", status: "failed", code: 1 }));
+    return { status: "failed", code: 1, exitCode: 1, stdout: "", stderr: msg, runTimeMs: 0, stdoutTrunc: "", stderrTrunc: msg };
+  }
+  const timeoutMs = spec.timeoutMs ?? SANDBOX_LIMITS.timeoutMs;
+
   // Set up temp directory
   const tmpDir = await fs.mkdtemp(path.join(os.tmpdir(), `job-${jobId}-`));
-  const isPython = language === "python";
-  const isBash = language === "bash" || language === "sh";
   const isSnapshot = !!(snapshotOptions?.isSnapshot || snapshotOptions?.files);
 
   if (isSnapshot && snapshotOptions?.files) {
@@ -95,9 +105,7 @@ export const runInDocker = async (
       await fs.writeFile(fullPath, content);
     }
   } else {
-    const filename = isPython ? "main.py" : isBash ? "script.sh" : "index.js";
-    const filePath = path.join(tmpDir, filename);
-    await fs.writeFile(filePath, code);
+    await fs.writeFile(path.join(tmpDir, spec.file), code);
   }
 
   let timeoutTimer: NodeJS.Timeout | null = null;
@@ -144,7 +152,7 @@ export const runInDocker = async (
       })
       .catch((e) => console.warn(`[worker] Failed to set status running for job ${jobId}:`, e));
 
-    const image = isPython || isBash ? "codesync-sandbox-python" : "codesync-sandbox-node";
+    const image = spec.image;
 
     // Docker run flags constructed from SANDBOX_LIMITS (hardening.ts: shared with the warm pool)
     const dockerArgs = ["run", "--name", containerName, "--rm", ...hardeningArgs()];
@@ -152,7 +160,10 @@ export const runInDocker = async (
     // B7: interactive single-file node/python jobs may take a pre-started, single-use
     // container from the warm pool (same hardening flags); the program is piped over stdin.
     // Snapshot (AI test) and bash jobs always use a fresh container.
-    const warm = !isSnapshot && !isBash ? warmPool.claim(isPython ? "python" : "javascript") : null;
+    const warm =
+      !isSnapshot && (image === "codesync-sandbox-python" || image === "codesync-sandbox-node")
+        ? warmPool.claim(image === "codesync-sandbox-python" ? "python" : "javascript")
+        : null;
     if (warm) containerName = warm.name;
     timing.sandbox = warm ? "warm" : "fresh";
 
@@ -162,31 +173,16 @@ export const runInDocker = async (
 
       const cmd = snapshotOptions?.command && snapshotOptions.command.length > 0
         ? snapshotOptions.command
-        : isPython ? ["python3", "main.py"] : ["node", "index.js"];
-
-      if (isPython) {
-        dockerArgs.push("--entrypoint", "python3");
-        dockerArgs.push(image);
-        const args = (cmd[0] === "python" || cmd[0] === "python3") ? cmd.slice(1) : cmd;
-        dockerArgs.push(...args);
-      } else if (isBash) {
-        dockerArgs.push("--entrypoint", "/bin/bash");
-        dockerArgs.push(image);
-        dockerArgs.push(...cmd);
-      } else {
-        dockerArgs.push("--entrypoint", "node");
-        dockerArgs.push(image);
-        const args = cmd[0] === "node" ? cmd.slice(1) : cmd;
-        dockerArgs.push(...args);
-      }
+        : [...spec.argv, spec.file];
+      // A command that starts with this language's interpreter runs as given; anything
+      // else (e.g. ["script.sh"]) is passed to the default interpreter as arguments.
+      const [entry, ...args] = spec.runners.includes(cmd[0]) ? cmd : [...spec.argv, ...cmd];
+      dockerArgs.push("--entrypoint", entry, image, ...args);
     } else {
-      const filename = isPython ? "main.py" : isBash ? "script.sh" : "index.js";
-      const filePath = path.join(tmpDir, filename);
-      dockerArgs.push("-v", `${filePath}:/app/${filename}:ro`);
-      if (isBash) {
-        dockerArgs.push("--entrypoint", "/bin/bash");
-      }
-      dockerArgs.push(image, `/app/${filename}`);
+      const filePath = path.join(tmpDir, spec.file);
+      dockerArgs.push("-v", `${filePath}:/app/${spec.file}:ro`);
+      const [entry, ...args] = spec.argv;
+      dockerArgs.push("--entrypoint", entry, image, ...args, `/app/${spec.file}`);
     }
 
     return await new Promise<ExecutionResult>((resolve, reject) => {
@@ -238,7 +234,7 @@ export const runInDocker = async (
         execFile("docker", ["rm", "-f", containerName], () => {});
         child.kill("SIGKILL");
 
-        const timeoutMsg = `\nExecution timed out after ${SANDBOX_LIMITS.timeoutMs / 1000}s.\n`;
+        const timeoutMsg = `\nExecution timed out after ${timeoutMs / 1000}s.\n`;
         if (stderrAccum.length < maxDbChars) {
           stderrAccum += timeoutMsg.slice(0, maxDbChars - stderrAccum.length);
         }
@@ -272,7 +268,7 @@ export const runInDocker = async (
         };
         await redis.set(`execution:result:${jobId}`, JSON.stringify(timeoutResult), "EX", 300);
         resolve(timeoutResult);
-      }, SANDBOX_LIMITS.timeoutMs);
+      }, timeoutMs);
 
       child.stdout.on("data", async (chunk: Buffer) => {
         if (isDone || isTruncated) return;
