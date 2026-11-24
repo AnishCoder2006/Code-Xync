@@ -1,10 +1,11 @@
 import Link from "next/link";
 import { useRouter } from "next/router";
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useState, type CSSProperties } from "react";
 import { AlertCircle, ChevronRight, FolderOpen, KeyRound, RefreshCw, Users } from "lucide-react";
 import { api, describeError, languageLabel, roleLabel, type RoomSummary } from "../../lib/api";
 import { useRequireAuth } from "../../lib/useRequireAuth";
 import { timeAgo } from "../../lib/util";
+import { extOf, languageInfo } from "../../lib/languages";
 import { CreateRoomForm } from "../../components/CreateRoomForm";
 import { JoinRoomForm } from "../../components/JoinRoomForm";
 import { Button } from "../../components/ui/button";
@@ -12,8 +13,6 @@ import { Alert, Badge, Card, CardContent, CardDescription, CardHeader, CardTitle
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "../../components/ui/overlay";
 
 type Load = { state: "loading" } | { state: "error"; message: string } | { state: "ready"; rooms: RoomSummary[] };
-
-const LANG_DOT: Record<string, string> = { python: "bg-[#3776ab]", javascript: "bg-[#e5b400]" };
 
 export default function Dashboard() {
   const auth = useRequireAuth();
@@ -87,8 +86,8 @@ export default function Dashboard() {
 
           {load.state === "ready" && load.rooms.length > 0 && (
             <ul className="grid gap-3" data-testid="room-list">
-              {load.rooms.map((r) => (
-                <li key={r.id}>
+              {load.rooms.map((r, i) => (
+                <li key={r.id} className="rise" style={{ "--d": `${Math.min(i, 8) * 55}ms` } as CSSProperties}>
                   <Link
                     href={`/room/${encodeURIComponent(r.id)}`}
                     data-testid="room-card"
@@ -96,7 +95,7 @@ export default function Dashboard() {
                     className="group flex items-center gap-4 rounded-xl border bg-card/90 px-4 py-3.5 shadow-sm backdrop-blur transition-all hover:-translate-y-px hover:border-primary/40 hover:shadow-md"
                   >
                     <span className="inline-flex size-10 shrink-0 items-center justify-center rounded-lg bg-muted font-mono text-xs font-semibold text-muted-foreground">
-                      {r.language === "python" ? ".py" : ".js"}
+                      {extOf(r.language)}
                     </span>
                     <div className="grid min-w-0 flex-1 gap-0.5">
                       <span className="truncate font-medium">{r.title}</span>
@@ -107,7 +106,7 @@ export default function Dashboard() {
                       </span>
                     </div>
                     <div className="hidden flex-wrap items-center justify-end gap-1.5 sm:flex">
-                      <Badge variant="outline"><span className={`size-1.5 rounded-full ${LANG_DOT[r.language] ?? "bg-muted-foreground"}`} />{languageLabel(r.language)}</Badge>
+                      <Badge variant="outline"><span className="size-1.5 rounded-full" style={{ background: languageInfo(r.language).color }} />{languageLabel(r.language)}</Badge>
                       {r.hasPasscode && <Badge variant="outline" title="Joining needs a passcode"><KeyRound className="size-3" />Passcode</Badge>}
                       <Badge variant={r.role === "OWNER" ? "accent" : "secondary"} data-testid="room-role">{roleLabel(r.role)}</Badge>
                     </div>

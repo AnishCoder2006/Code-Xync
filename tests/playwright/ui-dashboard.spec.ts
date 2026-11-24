@@ -16,7 +16,8 @@ test("signed-out: landing page, and /rooms redirects to sign-in", async ({ brows
   const { context, page } = await newUserPage(browser);
   await page.goto(appUrl("/"));
   await expect(page.getByTestId("landing")).toBeVisible();
-  await expect(page.getByRole("link", { name: "Create an account" })).toBeVisible();
+  await expect(page.getByRole("link", { name: "Start a room" })).toBeVisible();
+  await expect(page.getByTestId("spec-sheet")).toContainText("0 / 200");
 
   await page.goto(appUrl("/rooms"));
   await page.waitForURL(/\/sign-in\?redirect_url=%2Frooms/);

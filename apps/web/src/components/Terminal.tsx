@@ -14,9 +14,9 @@ interface TerminalProps {
 }
 
 const THEMES = {
-  // Match the card surface of the theme (globals.css --card).
-  dark: { background: "#11191c", foreground: "#d5e0df", cursor: "#11191c", selectionBackground: "#1f4743" },
-  light: { background: "#fdfcfa", foreground: "#1f2a2e", cursor: "#fdfcfa", selectionBackground: "#c9ece6" },
+  // Match the card surface of the theme (globals.css --card), ink & signal palette.
+  dark: { background: "#1b1a18", foreground: "#ede9e1", cursor: "#1b1a18", selectionBackground: "#3a2a22", red: "#f0605a", green: "#5bbe84", yellow: "#e3b067", blue: "#8ea2f5" },
+  light: { background: "#fbfaf6", foreground: "#161513", cursor: "#fbfaf6", selectionBackground: "#ffd9c7", red: "#c2322e", green: "#2f7d4f", yellow: "#9a5a0c", blue: "#2b4acb" },
 };
 
 /**
@@ -46,7 +46,7 @@ export function Terminal({ roomId, jobId, getToken, syncUrl, theme = "dark", onE
       const term = new XTerm({
         theme: THEMES[theme],
         fontSize: 13,
-        fontFamily: "'JetBrains Mono', 'Cascadia Code', Consolas, monospace",
+        fontFamily: "'IBM Plex Mono', 'JetBrains Mono', 'Cascadia Code', Consolas, monospace",
         convertEol: true,
         disableStdin: true,
         cursorBlink: false,

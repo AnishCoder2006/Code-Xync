@@ -15,11 +15,13 @@ if (typeof window !== "undefined") {
 
 export type ConnState = "connecting" | "connected" | "reconnecting" | "offline";
 export type PresenceUser = { id: string; name: string; color: string };
+/** Handed to the page once the editor is ready (and again when it binds). */
+export type EditorHelpers = { getCode: () => string; reveal: (startLine: number, endLine: number) => void };
 
 interface EditorProps {
   roomId: string;
   language: string;
-  onReady?: (helpers: { getCode: () => string } & (() => string)) => void;
+  onReady?: (helpers: EditorHelpers & (() => string)) => void;
   /** Override the sync server URL (defaults to NEXT_PUBLIC_SYNC_URL). */
   syncUrl?: string;
   /** Fixed auth token (used by /e2e/editor). */
@@ -85,7 +87,15 @@ export function Editor({
         if (bindingRef.current || editor.getModel() == null) return;
         bindingRef.current = new MonacoBinding(ydoc.getText("content"), editor.getModel()!, new Set([editor]), provider.awareness);
         const getCode = () => editor.getValue();
-        onReady?.(Object.assign(getCode, { getCode }) as any);
+        const reveal = (startLine: number, endLine: number) => {
+          const model = editor.getModel();
+          if (!model) return;
+          const end = Math.min(Math.max(endLine, startLine), model.getLineCount());
+          editor.revealLinesInCenter(startLine, end);
+          editor.setSelection({ startLineNumber: startLine, startColumn: 1, endLineNumber: end, endColumn: model.getLineMaxColumn(end) });
+          editor.focus();
+        };
+        onReady?.(Object.assign(getCode, { getCode, reveal }) as any);
       };
       // Bind only after the first sync: binding earlier loses the first edit / jumps the cursor.
       if (provider.synced) bind();
@@ -154,7 +164,7 @@ export function Editor({
       report();
 
       const getCode = () => (editorRef.current ? editorRef.current.getValue() : ydoc.getText("content").toString());
-      onReady?.(Object.assign(getCode, { getCode }) as any);
+      onReady?.(Object.assign(getCode, { getCode, reveal: () => {} }) as any);
 
       if (pendingMountRef.current) {
         const ed = pendingMountRef.current;
@@ -203,7 +213,8 @@ export function Editor({
       theme={MONACO_THEME[theme]}
       beforeMount={defineMonacoThemes}
       options={{
-        fontSize: 14,
+        fontSize: 14.5,
+        lineHeight: 22,
         minimap: { enabled: false },
         readOnly,
         readOnlyMessage: { value: "You're a viewer in this room, so you can't edit." },

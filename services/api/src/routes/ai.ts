@@ -3,6 +3,7 @@ import { authenticate } from "../middleware/auth";
 import { logger } from "../middleware/logger";
 import { prisma } from "../lib/prisma";
 import { wholeLineOccurrences } from "../lib/rangeMatch";
+import { isAiFixable } from "../lib/languages";
 import {
   bindProgressId,
   getProgressOwner,
@@ -149,6 +150,9 @@ router.post("/fix", async (req: Request, res: Response) => {
   try {
     const { roomId, code, prompt, language, filePath, testCommand, extraFiles } = req.body;
     if (!roomId || !code || !prompt) return res.status(400).json({ error: "Missing fields" });
+    if (language !== undefined && !isAiFixable(language)) {
+      return res.status(400).json({ error: `AI fixes are not available for ${language} yet.` });
+    }
     if (req.body.progressId !== undefined) {
       if (!isValidProgressId(req.body.progressId)) {
         return res.status(400).json({ error: "progressId must be a UUID" });
@@ -300,6 +304,8 @@ router.post("/fix", async (req: Request, res: Response) => {
       data: {
         status: data.status,
         diffPatch: data.patch,   // unified diff; stored for Accept replay
+        attempts: typeof data.llm_calls === "number" ? data.llm_calls : undefined,
+        costUsd: typeof data.total_cost_usd === "number" ? data.total_cost_usd : undefined,
       },
     });
 

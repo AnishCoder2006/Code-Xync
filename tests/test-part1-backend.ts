@@ -180,7 +180,7 @@ async function main() {
     r = await fetch(`${API}/ai/fix`, { method: "POST", headers: { "Content-Type": "application/json" }, body: "{}" });
     check("POST /ai/fix without auth -> 401", r.status === 401, r.status);
 
-    r = await fetch(`${API}/rooms`, { method: "POST", headers: jsonAuth(owner), body: JSON.stringify({ title: "Py room", language: "ruby" }) });
+    r = await fetch(`${API}/rooms`, { method: "POST", headers: jsonAuth(owner), body: JSON.stringify({ title: "Py room", language: "cobol" }) });
     check("POST /rooms with unsupported language -> 400", r.status === 400, r.status);
 
     r = await fetch(`${API}/rooms`, {
@@ -347,6 +347,36 @@ async function main() {
       r.status === 500 && s2.events.length === 1 && s2.events[0].step === "failed",
       { status: r.status, events: s2.events }
     );
+
+    // ── Room settings + delete (owner only) ───────────────────────────────
+    console.log("\n[rooms] settings and delete");
+    const patch = (uid: string, body: unknown) =>
+      fetch(`${API}/rooms/${created.id}`, { method: "PATCH", headers: jsonAuth(uid), body: JSON.stringify(body) });
+    r = await patch(editor, { title: "Hijacked" });
+    check("editor cannot change room settings -> 403", r.status === 403, r.status);
+    r = await patch(owner, { language: "cobol" });
+    check("unknown language in settings -> 400", r.status === 400, r.status);
+    r = await patch(owner, { title: "  Renamed room  ", language: "ruby", passcode: null, isPrivate: true });
+    const renamed = await r.json();
+    check(
+      "owner renames, switches language, removes passcode",
+      r.status === 200 && renamed.title === "Renamed room" && renamed.language === "ruby" && renamed.hasPasscode === false && renamed.isPrivate === true,
+      renamed
+    );
+    r = await fetch(`${API}/rooms/${created.id}/join`, { method: "POST", headers: jsonAuth(outsider), body: "{}" });
+    check("after removing the passcode anyone with the ID can join", r.status === 200, r.status);
+    r = await fetch(`${API}/rooms/${created.id}`, { method: "DELETE", headers: auth(editor) });
+    check("editor cannot delete the room -> 403", r.status === 403, r.status);
+    r = await fetch(`${API}/rooms/${created.id}`, { method: "DELETE", headers: auth(owner) });
+    check("owner deletes the room -> 200", r.status === 200, r.status);
+    const left = await Promise.all([
+      prisma.room.count({ where: { id: created.id } }),
+      prisma.roomMember.count({ where: { roomId: created.id } }),
+      prisma.aIInteraction.count({ where: { roomId: created.id } }),
+    ]);
+    check("room, members and AI history are gone", left.every((n) => n === 0), left);
+    r = await fetch(`${API}/rooms`, { headers: auth(owner) });
+    check("deleted room no longer listed", !(await r.json()).rooms.some((x: any) => x.id === created.id));
   } finally {
     killProc(aiProc);
     await new Promise((r) => (apiServer ? apiServer.close(() => r(null)) : r(null)));

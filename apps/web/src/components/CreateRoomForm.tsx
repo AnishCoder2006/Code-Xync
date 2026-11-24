@@ -4,7 +4,8 @@ import { api, describeError, type GetToken, type Language, type RoomDetail } fro
 import { Button } from "./ui/button";
 import { Field, Input, Label, Switch } from "./ui/form";
 import { Alert, Spinner } from "./ui/display";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "./ui/overlay";
+import { LanguageSelect } from "./LanguageSelect";
+import { languageInfo } from "../lib/languages";
 
 export function CreateRoomForm({ getToken, onCreated }: { getToken: GetToken; onCreated: (roomId: string) => void }) {
   const [title, setTitle] = useState("");
@@ -35,16 +36,12 @@ export function CreateRoomForm({ getToken, onCreated }: { getToken: GetToken; on
       <Field label="Room name" htmlFor="room-title">
         <Input id="room-title" name="title" value={title} onChange={(e) => setTitle(e.target.value)} maxLength={80} placeholder="Pairing on the parser" />
       </Field>
-      <Field label="Language" htmlFor="room-language">
-        <Select value={language} onValueChange={(v) => setLanguage(v as Language)}>
-          <SelectTrigger id="room-language" data-testid="language-select" aria-label="Language">
-            <SelectValue />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="python">Python</SelectItem>
-            <SelectItem value="javascript">JavaScript</SelectItem>
-          </SelectContent>
-        </Select>
+      <Field
+        label="Language"
+        htmlFor="room-language"
+        hint={languageInfo(language).run ? "Edit together, run in the sandbox, and ask for AI fixes." : "Edit together with highlighting. Running and AI fixes are not available for this language yet."}
+      >
+        <LanguageSelect id="room-language" value={language} onChange={(v) => setLanguage(v)} />
       </Field>
       <div className="flex items-center justify-between rounded-lg border bg-muted/40 px-3 py-2.5">
         <div className="grid gap-0.5">
@@ -62,7 +59,7 @@ export function CreateRoomForm({ getToken, onCreated }: { getToken: GetToken; on
           <span>{error}</span>
         </Alert>
       )}
-      <Button type="submit" disabled={busy}>
+      <Button type="submit" variant="brand" disabled={busy}>
         {busy ? <Spinner /> : <Plus />}
         Create room
       </Button>

@@ -1,4 +1,5 @@
 // Small typed client for the CodeSync API. Every call sends the bearer token.
+import { languageInfo } from "./languages";
 
 export const API_URL = (process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000").replace(/\/$/, "");
 export const SYNC_URL = process.env.NEXT_PUBLIC_SYNC_URL || "ws://localhost:4001";
@@ -81,7 +82,8 @@ export function describeError(err: unknown, context?: "run" | "ai"): string {
 
 // ── API shapes ─────────────────────────────────────────────────────────────
 export type Role = "OWNER" | "EDITOR" | "VIEWER";
-export type Language = "python" | "javascript";
+/** A language id from lib/languages.ts. */
+export type Language = string;
 
 export type RoomSummary = {
   id: string;
@@ -108,7 +110,60 @@ export type RoomDetail = {
   members: { userId: string; name: string | null; role: Role; joinedAt: string }[];
 };
 
-export const fileNameFor = (language: string) => (language === "python" ? "main.py" : "main.js");
-export const languageLabel = (language: string) => (language === "python" ? "Python" : "JavaScript");
+export const fileNameFor = (language: string) => languageInfo(language).file;
+export const languageLabel = (language: string) => languageInfo(language).label;
 export const roleLabel = (role: Role | null | undefined) =>
   role === "OWNER" ? "Owner" : role === "EDITOR" ? "Editor" : role === "VIEWER" ? "Viewer" : "";
+
+export type SearchHit = {
+  path: string;
+  start_line: number;
+  end_line: number;
+  ast_type: string;
+  function_name: string;
+  score: number;
+  text: string;
+};
+
+type Who = { id: string; name: string | null };
+export type RunRecord = { jobId: string; status: string; runTimeMs: number | null; createdAt: string; user?: Who; preview?: string; room?: { id: string; title: string; language: string } };
+export type FixRecord = { id: string; prompt: string; status: string; attempts: number | null; costUsd: number | null; createdAt: string; user?: Who; room?: { id: string; title: string; language: string } };
+export type RoomHistory = { runs: RunRecord[]; aiFixes: FixRecord[] };
+export type Activity = { summary: { runs7d: number; aiFixes7d: number; accepted7d: number }; runs: RunRecord[]; aiFixes: FixRecord[] };
+
+export type SyncNode = {
+  nodeId: string; ok: boolean; latencyMs: number; error?: string;
+  rooms: number | null; clients: number | null; uptimeMs: number | null; redis: string | null;
+  routedWs: number | null; published: number | null; received: number | null;
+};
+export type SystemStatus = {
+  checkedAt: string;
+  api: { ok: boolean; uptimeMs: number; nodeEnv: string };
+  redis: { ok: boolean; latencyMs: number; error?: string };
+  queue: { ok: boolean; error?: string; waiting?: number; active?: number; delayed?: number; completed?: number; failed?: number; maxQueueLength: number; ratePerMinute: number };
+  sync: { loadBalanced: boolean; nodes: SyncNode[] };
+  ai: { ok: boolean; latencyMs: number; error?: string; provider: string | null };
+};
+
+/** Human labels for run / AI statuses (shared by history and activity). */
+export const RUN_STATUS: Record<string, { label: string; tone: "success" | "destructive" | "warning" | "secondary" }> = {
+  passed: { label: "Exit 0", tone: "success" },
+  failed: { label: "Failed", tone: "destructive" },
+  timeout: { label: "Timed out", tone: "warning" },
+  killed: { label: "Killed", tone: "destructive" },
+  truncated: { label: "Output capped", tone: "warning" },
+  running: { label: "Running", tone: "secondary" },
+  queued: { label: "Queued", tone: "secondary" },
+};
+export const FIX_STATUS: Record<string, { label: string; tone: "success" | "destructive" | "warning" | "secondary" | "accent" }> = {
+  accepted: { label: "Accepted", tone: "success" },
+  verified: { label: "Verified, not applied", tone: "accent" },
+  unverified_no_test: { label: "Ran cleanly, not applied", tone: "accent" },
+  rejected: { label: "Rejected", tone: "secondary" },
+  stale: { label: "Stale (file changed)", tone: "warning" },
+  exhausted: { label: "No working fix", tone: "destructive" },
+  apply_error: { label: "Couldn't apply", tone: "destructive" },
+  failed: { label: "Failed", tone: "destructive" },
+  error: { label: "Error", tone: "destructive" },
+  pending: { label: "In progress", tone: "secondary" },
+};

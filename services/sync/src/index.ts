@@ -253,6 +253,7 @@ const server = http.createServer(async (req, res) => {
       relay: relayStats,
       persistence: persistStats,
       viewer: viewerStats,
+      control: controlStats,
     };
     if (authed) {
       const roomDetails: Record<string, { clients: number }> = {};
@@ -373,6 +374,31 @@ server.on("upgrade", async (request, socket, head) => {
   }
 });
 
+// ── Permission changes (role changed / member removed) ─────────────────────
+// Roles are checked when a socket connects. When the API changes a member's role or
+// removes them it publishes {roomId, userId} on SYNC_CONTROL_CHANNEL; every node closes
+// that user's sockets in that room (code 4001). y-websocket reconnects at once and the
+// upgrade handler checks the NEW role (or refuses a removed member).
+export const SYNC_CONTROL_CHANNEL = "sync:control";
+const socketOwners = new Map<WebSocket, { userId: string; roomId: string }>();
+export const controlStats = { reauthRequests: 0, socketsClosedForReauth: 0 };
+const control = new Redis(process.env.REDIS_URL || "redis://localhost:6380", { maxRetriesPerRequest: null });
+control.on("error", () => {});
+control.subscribe(SYNC_CONTROL_CHANNEL).catch((err) => logErr("control channel subscribe failed:", err));
+control.on("message", (channel, raw) => {
+  if (channel !== SYNC_CONTROL_CHANNEL) return;
+  let msg: { type?: string; roomId?: string; userId?: string };
+  try { msg = JSON.parse(raw); } catch { return; }
+  if (msg.type !== "reauth" || !msg.roomId || !msg.userId) return;
+  controlStats.reauthRequests++;
+  socketOwners.forEach((owner, ws) => {
+    if (owner.roomId === msg.roomId && owner.userId === msg.userId) {
+      controlStats.socketsClosedForReauth++;
+      ws.close(4001, "permissions changed");
+    }
+  });
+});
+
 function handleTerminal(ws: WebSocket, roomId: string, jobId: string | undefined) {
   if (!jobId) {
     ws.close(4000, "Missing jobId for terminal");
@@ -412,6 +438,7 @@ wss.on("connection", (ws: WebSocket, request: http.IncomingMessage, clientInfo: 
   }
 
   log(`Connection from user ${userId} for room ${roomId}`);
+  socketOwners.set(ws, { userId, roomId });
   ws.on("error", (err) => logErr(`socket error (${userId}):`, err.message));
 
   // Buffer frames until the room is loaded so nothing the client sends early is lost.
@@ -452,6 +479,7 @@ wss.on("connection", (ws: WebSocket, request: http.IncomingMessage, clientInfo: 
 
   ws.on("close", () => {
     closed = true;
+    socketOwners.delete(ws);
     if (!room) return;
     const r = room;
     r.clients.delete(ws);

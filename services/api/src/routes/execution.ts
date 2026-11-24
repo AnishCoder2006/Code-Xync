@@ -6,6 +6,7 @@ import { authenticate } from "../middleware/auth";
 import { logger } from "../middleware/logger";
 import { prisma } from "../lib/prisma";
 import { executionRateLimiter, sandboxRateLimiter } from "../middleware/rateLimit";
+import { isRunnable } from "../lib/languages";
 
 const router = Router();
 const redisUrl = process.env.REDIS_URL || "redis://localhost:6380";
@@ -55,6 +56,9 @@ router.post("/sandbox", verifyInternalAuth, sandboxRateLimiter, async (req: Requ
     const { roomId, files, command, language } = req.body;
     if (!files || !command || !language) {
       return res.status(400).json({ error: "Missing required fields: files, command, language" });
+    }
+    if (!isRunnable(language) && language !== "sh") {
+      return res.status(400).json({ error: `Running ${language} code is not supported.` });
     }
 
     const payloadStr = JSON.stringify(files);
@@ -121,6 +125,9 @@ router.post("/", executionRateLimiter, async (req: Request, res: Response) => {
     const { roomId, code, language } = req.body;
     if (!roomId || !code || !language) {
       return res.status(400).json({ error: "Missing required fields: roomId, code, language" });
+    }
+    if (!isRunnable(language) && language !== "sh") {
+      return res.status(400).json({ error: `Running ${language} code is not supported yet.` });
     }
 
     if (!req.user) {

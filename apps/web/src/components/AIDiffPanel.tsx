@@ -11,6 +11,7 @@ import { toast } from "sonner";
 import { ApiError, api, describeError, fileNameFor, type GetToken } from "../lib/api";
 import { openProgressStream, type ProgressEvent } from "../lib/aiProgress";
 import { uuid } from "../lib/util";
+import { languageInfo } from "../lib/languages";
 import { MONACO_THEME, defineMonacoThemes } from "../lib/monacoTheme";
 import { cn } from "../lib/utils";
 import { Button } from "./ui/button";
@@ -43,6 +44,8 @@ type Props = {
   diffHost: HTMLElement | null;
   theme: "light" | "dark";
   onClose: () => void;
+  /** Inside the room's tabbed panel: the tab bar already names it and has the close button. */
+  embedded?: boolean;
 };
 
 const REASONS: Record<string, string> = {
@@ -77,7 +80,7 @@ function StepIcon({ kind }: { kind: "active" | "ok" | "good" | "warn" | "bad" })
   return <span className={cn(base, "border bg-card text-muted-foreground")}><Check className="size-3" strokeWidth={2.5} /></span>;
 }
 
-export function AIDiffPanel({ roomId, language, getCode, getToken, disabledReason, diffHost, theme, onClose }: Props) {
+export function AIDiffPanel({ roomId, language, getCode, getToken, disabledReason, diffHost, theme, onClose, embedded = false }: Props) {
   const [prompt, setPrompt] = useState("");
   const [phase, setPhase] = useState<Phase>("idle");
   const [events, setEvents] = useState<ProgressEvent[]>([]);
@@ -193,7 +196,7 @@ export function AIDiffPanel({ roomId, language, getCode, getToken, disabledReaso
       <div className="min-h-0 flex-1">
         <DiffEditor
           height="100%"
-          language={language}
+          language={languageInfo(language).monaco}
           original={baseCode}
           modified={result!.patched_text!}
           theme={MONACO_THEME[theme]}
@@ -208,7 +211,7 @@ export function AIDiffPanel({ roomId, language, getCode, getToken, disabledReaso
 
   return (
     <section className="flex h-full flex-col gap-4 overflow-y-auto p-4" aria-label="AI fix" data-testid="ai-panel">
-      <div className="flex items-center justify-between">
+      <div className={cn("flex items-center justify-between", embedded && "hidden")}>
         <h2 className="flex items-center gap-2 text-sm font-semibold">
           <span className="inline-flex size-6 items-center justify-center rounded-md bg-accent text-accent-foreground"><Sparkles className="size-3.5" /></span>
           AI fix

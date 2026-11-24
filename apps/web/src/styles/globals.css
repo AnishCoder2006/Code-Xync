@@ -3,113 +3,255 @@
 @tailwind utilities;
 
 /*
- * shadcn/ui theme tokens. CodeSync palette: teal "signal" primary + warm amber accent on
- * warm paper (light) / deep green-slate (dark). No purple. Light + dark via prefers-color-scheme.
+ * CodeSync — "ink & signal".
+ * Bone paper and ink (dark: warm charcoal and bone). One signal colour, burnt orange, carries
+ * the single main action on a screen; cobalt carries data and links.
+ * Contrast: white on #c2410c 5.18:1 (light), charcoal on #f05a26 5.27:1 (dark);
+ * secondary text 6.9:1 (light) / 7.6:1 (dark).
  */
 @layer base {
   :root {
-    --background: 40 30% 97%;
-    --foreground: 200 25% 10%;
-    --card: 40 33% 99.5%;
-    --card-foreground: 200 25% 10%;
-    --popover: 0 0% 100%;
-    --popover-foreground: 200 25% 10%;
-    --primary: 174 72% 32%;
-    --primary-foreground: 0 0% 100%;
-    --secondary: 40 18% 92%;
-    --secondary-foreground: 200 25% 14%;
-    --muted: 40 16% 93%;
-    --muted-foreground: 200 8% 40%;
-    --accent: 172 45% 92%;
-    --accent-foreground: 174 80% 22%;
-    --highlight: 32 95% 52%;
-    --destructive: 2 72% 48%;
+    --background: 43 29% 94%;        /* #f4f1ea bone */
+    --foreground: 40 7% 8%;          /* #161513 ink */
+    --card: 48 38% 97%;              /* #fbfaf6 */
+    --card-foreground: 40 7% 8%;
+    --popover: 48 38% 98%;
+    --popover-foreground: 40 7% 8%;
+    --primary: 40 7% 8%;             /* ink buttons */
+    --primary-foreground: 43 29% 96%;
+    --secondary: 41 29% 89%;
+    --secondary-foreground: 40 7% 10%;
+    --muted: 41 25% 90%;
+    --muted-foreground: 40 9% 33%;   /* #5c574d */
+    --accent: 41 28% 88%;            /* neutral highlight (active tabs, hovers) */
+    --accent-foreground: 40 7% 8%;
+    --brand: 17 88% 40%;             /* #c2410c burnt signal */
+    --brand-foreground: 30 100% 99%;
+    --cobalt: 228 65% 48%;           /* #2b4acb */
+    --destructive: 1 62% 47%;
     --destructive-foreground: 0 0% 100%;
-    --success: 152 70% 30%;
+    --success: 145 45% 34%;
     --success-foreground: 0 0% 100%;
-    --warning: 30 92% 38%;
+    --warning: 35 81% 37%;
     --warning-foreground: 0 0% 100%;
-    --border: 40 14% 86%;
-    --input: 40 12% 80%;
-    --ring: 174 72% 36%;
-    --radius: 0.6rem;
-    --topbar-h: 3.5rem;
-    /* background art */
-    --bg-dot: 200 20% 30% / 0.10;
-    --bg-glow-a: 174 75% 45% / 0.16;
-    --bg-glow-b: 32 95% 55% / 0.14;
+    --border: 40 18% 82%;
+    --input: 40 16% 74%;
+    --ring: 17 88% 40%;
+    --radius: 0.5rem;
+    --topbar-h: 3.75rem;
+    --chart-1: #2b4acb;
+    --ease-out: cubic-bezier(0.22, 1, 0.36, 1);
+    --ease-spring: cubic-bezier(0.34, 1.4, 0.64, 1);
+    /* Backdrop strength (glows, dot grid, grain). */
+    --glow-a: 0.16;
+    --glow-b: 0.12;
+    --glow-c: 0.1;
+    --grid-dot: 0.11;
+    --grain: 0.05;
     color-scheme: light;
   }
 
+  /* Dark: follows the system unless the toggle chose light; or forced by the toggle. */
   @media (prefers-color-scheme: dark) {
-    :root {
-      --background: 196 30% 6%;
-      --foreground: 180 12% 92%;
-      --card: 196 26% 9%;
-      --card-foreground: 180 12% 92%;
-      --popover: 196 26% 10%;
-      --popover-foreground: 180 12% 92%;
-      --primary: 170 75% 48%;
-      --primary-foreground: 196 35% 6%;
-      --secondary: 196 18% 14%;
-      --secondary-foreground: 180 12% 92%;
-      --muted: 196 18% 13%;
-      --muted-foreground: 190 8% 62%;
-      --accent: 172 40% 15%;
-      --accent-foreground: 168 75% 70%;
-      --highlight: 36 95% 60%;
-      --destructive: 4 85% 64%;
-      --destructive-foreground: 196 35% 6%;
-      --success: 150 65% 52%;
-      --success-foreground: 196 35% 6%;
-      --warning: 40 95% 58%;
-      --warning-foreground: 196 35% 6%;
-      --border: 196 16% 17%;
-      --input: 196 15% 22%;
-      --ring: 170 75% 48%;
-      --bg-dot: 180 30% 80% / 0.07;
-      --bg-glow-a: 170 80% 45% / 0.13;
-      --bg-glow-b: 36 95% 55% / 0.08;
+    :root:not([data-theme="light"]) {
+      --background: 30 8% 10%;       /* #1c1a17 warm charcoal */
+      --foreground: 41 25% 91%;      /* #ede9e1 bone */
+      --card: 30 7% 13%;             /* #232120 */
+      --card-foreground: 41 25% 91%;
+      --popover: 30 7% 14%;
+      --popover-foreground: 41 25% 91%;
+      --primary: 41 25% 91%;
+      --primary-foreground: 30 8% 9%;
+      --secondary: 30 7% 17%;
+      --secondary-foreground: 41 25% 91%;
+      --muted: 30 7% 16%;
+      --muted-foreground: 40 10% 68%;
+      --accent: 30 7% 19%;
+      --accent-foreground: 41 25% 93%;
+      --brand: 15 87% 55%;           /* #f05a26 */
+      --brand-foreground: 30 8% 8%;
+      --cobalt: 228 78% 68%;
+      --destructive: 2 83% 65%;
+      --destructive-foreground: 30 8% 8%;
+      --success: 145 42% 55%;
+      --success-foreground: 30 8% 8%;
+      --warning: 36 76% 56%;
+      --warning-foreground: 30 8% 8%;
+      --border: 30 6% 21%;
+      --input: 30 6% 27%;
+      --ring: 15 87% 55%;
+      --chart-1: #6f88ee;
+      --glow-a: 0.22;
+      --glow-b: 0.2;
+      --glow-c: 0.1;
+      --grid-dot: 0.09;
+      --grain: 0.07;
       color-scheme: dark;
     }
   }
+  :root[data-theme="dark"] {
+    --background: 30 8% 10%;       /* #1c1a17 warm charcoal */
+    --foreground: 41 25% 91%;      /* #ede9e1 bone */
+    --card: 30 7% 13%;             /* #232120 */
+    --card-foreground: 41 25% 91%;
+    --popover: 30 7% 14%;
+    --popover-foreground: 41 25% 91%;
+    --primary: 41 25% 91%;
+    --primary-foreground: 30 8% 9%;
+    --secondary: 30 7% 17%;
+    --secondary-foreground: 41 25% 91%;
+    --muted: 30 7% 16%;
+    --muted-foreground: 40 10% 68%;
+    --accent: 30 7% 19%;
+    --accent-foreground: 41 25% 93%;
+    --brand: 15 87% 55%;           /* #f05a26 */
+    --brand-foreground: 30 8% 8%;
+    --cobalt: 228 78% 68%;
+    --destructive: 2 83% 65%;
+    --destructive-foreground: 30 8% 8%;
+    --success: 145 42% 55%;
+    --success-foreground: 30 8% 8%;
+    --warning: 36 76% 56%;
+    --warning-foreground: 30 8% 8%;
+    --border: 30 6% 21%;
+    --input: 30 6% 27%;
+    --ring: 15 87% 55%;
+    --chart-1: #6f88ee;
+    --glow-a: 0.22;
+    --glow-b: 0.2;
+    --glow-c: 0.1;
+    --grid-dot: 0.09;
+    --grain: 0.07;
+    color-scheme: dark;
+  }
+  :root[data-theme="light"] { color-scheme: light; }
 
   * { @apply border-border; }
+  html { scroll-behavior: smooth; }
   html, body, #__next { height: 100%; }
   body {
-    @apply bg-background font-sans text-sm text-foreground antialiased;
-    font-feature-settings: "cv11", "ss01";
+    @apply bg-background font-sans text-[15px] leading-relaxed text-foreground antialiased;
   }
-  ::selection { background: hsl(var(--primary) / 0.25); }
+  h1, h2, h3 { @apply font-display; letter-spacing: -0.02em; }
+  ::selection { background: hsl(var(--brand) / 0.28); }
+  :focus-visible { outline-color: hsl(var(--ring)); }
 }
 
 @layer components {
-  /*
-   * Signature backdrop: a fine dot grid (like graph paper / a terminal matrix) under two
-   * soft glows, teal top-left and amber bottom-right. Fixed, so content scrolls over it.
-   */
+  /* Static version of the backdrop for full-screen states inside the room workspace. */
   .app-backdrop {
-    background-color: hsl(var(--background));
+    background:
+      radial-gradient(ellipse 60% 50% at 85% 0%, hsl(var(--brand) / calc(var(--glow-a) * 0.6)), transparent 70%),
+      radial-gradient(ellipse 55% 50% at 10% 5%, hsl(var(--cobalt) / calc(var(--glow-b) * 0.6)), transparent 70%),
+      hsl(var(--background));
+  }
+
+  /* ── Page backdrop: dot grid + three slow light fields + film grain ───────────── */
+  .backdrop-grid {
+    background-image: radial-gradient(hsl(var(--foreground) / var(--grid-dot)) 1px, transparent 1.3px);
+    background-size: 24px 24px;
+    -webkit-mask-image: radial-gradient(ellipse 75% 60% at 50% 0%, #000 25%, transparent 100%);
+    mask-image: radial-gradient(ellipse 75% 60% at 50% 0%, #000 25%, transparent 100%);
+  }
+  .glow {
+    position: absolute;
+    border-radius: 9999px;
+    filter: blur(96px);
+    will-change: transform;
+  }
+  .glow-a {
+    width: 46rem; height: 30rem; top: -15rem; right: -10rem;
+    background: hsl(var(--brand) / var(--glow-a));
+    animation: drift-a 28s var(--ease-out) infinite alternate;
+  }
+  .glow-b {
+    width: 42rem; height: 28rem; top: -12rem; left: -14rem;
+    background: hsl(var(--cobalt) / var(--glow-b));
+    animation: drift-b 34s ease-in-out infinite alternate;
+  }
+  .glow-c {
+    width: 36rem; height: 24rem; top: 55%; left: 30%;
+    background: hsl(var(--warning) / var(--glow-c));
+    animation: drift-c 40s ease-in-out infinite alternate;
+  }
+  .backdrop-grain {
+    opacity: var(--grain);
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='180' height='180'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.8' numOctaves='3' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 0.5 0 0 0 0 0.5 0 0 0 0 0.5 0 0 0 1 0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+  }
+
+  /* Mono "eyebrow" label: section numbers, kickers, table heads. */
+  .eyebrow {
+    @apply font-mono text-[11px] font-medium uppercase tracking-[0.14em] text-muted-foreground;
+  }
+  /* Graph-paper field for the hero visual only. */
+  .ruled {
     background-image:
-      radial-gradient(hsl(var(--bg-dot)) 1px, transparent 1.2px),
-      radial-gradient(60rem 36rem at 8% -10%, hsl(var(--bg-glow-a)), transparent 70%),
-      radial-gradient(48rem 32rem at 100% 105%, hsl(var(--bg-glow-b)), transparent 70%);
-    background-size: 22px 22px, 100% 100%, 100% 100%;
-    background-attachment: fixed;
+      linear-gradient(hsl(var(--border) / 0.7) 1px, transparent 1px),
+      linear-gradient(90deg, hsl(var(--border) / 0.7) 1px, transparent 1px);
+    background-size: 28px 28px;
   }
-  /* Faint diagonal "sync" lines across the hero only. */
-  .hero-lines {
-    background-image: repeating-linear-gradient(
-      -35deg,
-      transparent 0 46px,
-      hsl(var(--primary) / 0.06) 46px 47px
-    );
-    mask-image: radial-gradient(ellipse 70% 60% at 30% 30%, black 30%, transparent 75%);
+
+  /* ── Motion ─────────────────────────────────────────────────────────────────── */
+  /* Entrance: set --d on the element to stagger. */
+  .rise { animation: rise 0.8s var(--ease-out) both; animation-delay: var(--d, 0ms); }
+  .float-in { animation: float-in 0.9s var(--ease-spring) both; animation-delay: var(--d, 0ms); }
+  .page-enter { animation: page-in 0.5s var(--ease-out) both; }
+  .page-fade { animation: fade-in 0.35s ease-out both; }
+  /* Underline that draws itself under a word. */
+  .draw-underline { position: relative; white-space: nowrap; }
+  .draw-underline::after {
+    content: "";
+    position: absolute; left: -0.04em; right: -0.04em; bottom: 0.02em; height: 0.14em;
+    border-radius: 999px;
+    background: hsl(var(--brand));
+    transform-origin: left center;
+    animation: draw-x 0.9s var(--ease-out) both;
+    animation-delay: var(--d, 600ms);
   }
-  .text-gradient {
-    background: linear-gradient(100deg, hsl(var(--primary)) 10%, hsl(var(--highlight)) 90%);
-    -webkit-background-clip: text;
-    background-clip: text;
-    color: transparent;
+  .caret-blink { animation: caret-blink 1.1s steps(1, end) infinite; }
+  .live-dot { animation: live-ring 1.8s ease-out infinite; }
+  .typing-dot { animation: typing 1.2s ease-in-out infinite; }
+
+  /* Scroll reveal (components/Reveal.tsx). Content renders visible on the server; only
+     elements below the fold at mount are hidden and then revealed. */
+  [data-reveal="hidden"] { opacity: 0; transform: translateY(22px); }
+  [data-reveal="shown"] {
+    opacity: 1; transform: none;
+    transition: opacity 0.8s var(--ease-out), transform 0.8s var(--ease-out);
+    transition-delay: var(--d, 0ms);
   }
+}
+
+@keyframes rise { from { opacity: 0; transform: translateY(16px); } to { opacity: 1; transform: none; } }
+@keyframes page-in { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: none; } }
+@keyframes fade-in { from { opacity: 0; } to { opacity: 1; } }
+@keyframes float-in {
+  from { opacity: 0; transform: translate(16px, 22px) rotate(2deg); }
+  to { opacity: 1; transform: none; }
+}
+@keyframes typing { 0%, 60%, 100% { opacity: 0.25; transform: none; } 30% { opacity: 1; transform: translateY(-2px); } }
+@keyframes draw-x { from { transform: scaleX(0); } to { transform: scaleX(1); } }
+@keyframes caret-blink { 0% { opacity: 1; } 50% { opacity: 0; } }
+@keyframes live-ring {
+  0% { box-shadow: 0 0 0 0 hsl(var(--success) / 0.55); }
+  100% { box-shadow: 0 0 0 7px hsl(var(--success) / 0); }
+}
+@keyframes drift-a { from { transform: translate3d(0, 0, 0) scale(1); } to { transform: translate3d(-10rem, 7rem, 0) scale(1.18); } }
+@keyframes drift-b { from { transform: translate3d(0, 0, 0) scale(1.05); } to { transform: translate3d(12rem, 5rem, 0) scale(0.92); } }
+@keyframes drift-c { from { transform: translate3d(0, 0, 0) scale(0.9); } to { transform: translate3d(-14rem, -6rem, 0) scale(1.1); } }
+
+/* Theme switch: the new theme is revealed as a circle from the toggle (View Transitions). */
+::view-transition-old(root),
+::view-transition-new(root) { animation: none; mix-blend-mode: normal; }
+
+@media (prefers-reduced-motion: reduce) {
+  html { scroll-behavior: auto; }
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    animation-delay: 0ms !important;
+    transition-duration: 0.01ms !important;
+    transition-delay: 0ms !important;
+  }
+  [data-reveal="hidden"] { opacity: 1; transform: none; }
 }

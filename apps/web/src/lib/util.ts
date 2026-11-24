@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { currentTheme, subscribeTheme } from "./theme";
 
 const PALETTE = ["#e11d48", "#ea580c", "#ca8a04", "#16a34a", "#0891b2", "#2563eb", "#db2777", "#65a30d"];
 
@@ -41,11 +42,9 @@ export function uuid(): string {
 export function useColorScheme(): "light" | "dark" {
   const [scheme, setScheme] = useState<"light" | "dark">("light");
   useEffect(() => {
-    const mq = window.matchMedia("(prefers-color-scheme: dark)");
-    const update = () => setScheme(mq.matches ? "dark" : "light");
+    const update = () => setScheme(currentTheme());
     update();
-    mq.addEventListener("change", update);
-    return () => mq.removeEventListener("change", update);
+    return subscribeTheme(update);
   }, []);
   return scheme;
 }

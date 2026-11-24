@@ -33,10 +33,15 @@ Decisions already made by the owner:
 ## Part 2 · Frontend (Next.js pages router, `apps/web`)
 
 Design (changed by the owner on 2026-11-24, was "CSS Modules, no UI framework"): **shadcn/ui**
-(Tailwind 3.4 + Radix primitives, components copied into `apps/web/src/components/ui`), own
-palette (teal primary, amber highlight, warm paper / deep green-slate neutrals, no purple),
-signature backdrop (dot grid + teal/amber glows) outside the editor, light and dark. Every
-screen has loading, empty and error states.
+(Tailwind 3.4 + Radix primitives, components in `apps/web/src/components/ui`). Visual identity
+"ink & signal" (owner rejected the first teal/amber look as generic): bone paper / carbon,
+near-black ink, one signal-vermilion main action per screen (ink text on it), cobalt for data
+and links, Bricolage Grotesque + IBM Plex Sans/Mono, hairline rules, no gradients or glows, no
+purple. Every screen has loading, empty and error states.
+
+Scope added by the owner on 2026-11-24: 9 runnable languages (interpreted only, same sandbox
+hardening) + 22 edit-only; a page or panel for every phase: room tabs (AI fix, Search,
+History, People, Settings), Activity, System status, Benchmarks.
 
 | # | Step | Done when |
 |---|---|---|

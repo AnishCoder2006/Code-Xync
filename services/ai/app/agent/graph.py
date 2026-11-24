@@ -44,6 +44,7 @@ from app.agent.edit_applier import apply_function_edit, ApplyResult
 from app.agent.critic import evaluate_sandbox_result
 from app.agent.llm_provider import get_llm_provider, BaseLLMProvider, LLMResponse, wrap_untrusted_code
 from app.agent.progress import ProgressPublisher
+from app.agent.languages import default_command
 
 logger = logging.getLogger(__name__)
 
@@ -223,7 +224,7 @@ def _call_sandbox(
     Fails clearly if the API is down or unavailable.
     """
     filename = file_path.split("/")[-1] if "/" in file_path else file_path
-    cmd = test_command or (["python3", filename] if language == "python" else ["node", filename])
+    cmd = test_command or default_command(language, filename)
     files_map = {filename: working_content}
     if extra_files:
         files_map.update(extra_files)

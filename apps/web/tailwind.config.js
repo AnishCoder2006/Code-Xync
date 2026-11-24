@@ -1,7 +1,14 @@
 /** @type {import('tailwindcss').Config} */
 // shadcn/ui theme: colours are HSL CSS variables in src/styles/globals.css (light + dark).
 module.exports = {
-  darkMode: "media",
+  // System preference unless the theme toggle set data-theme on <html> (src/lib/theme.ts).
+  darkMode: [
+    "variant",
+    [
+      "@media (prefers-color-scheme: dark) { &:not([data-theme=light], [data-theme=light] *) }",
+      "&:is([data-theme=dark], [data-theme=dark] *)",
+    ],
+  ],
   content: ["./src/**/*.{ts,tsx}"],
   theme: {
     container: { center: true, padding: "1.25rem", screens: { "2xl": "1200px" } },
@@ -19,7 +26,9 @@ module.exports = {
         warning: { DEFAULT: "hsl(var(--warning))", foreground: "hsl(var(--warning-foreground))" },
         muted: { DEFAULT: "hsl(var(--muted))", foreground: "hsl(var(--muted-foreground))" },
         accent: { DEFAULT: "hsl(var(--accent))", foreground: "hsl(var(--accent-foreground))" },
-        highlight: "hsl(var(--highlight))",
+        brand: { DEFAULT: "hsl(var(--brand))", foreground: "hsl(var(--brand-foreground))" },
+        cobalt: "hsl(var(--cobalt))",
+        chart: "var(--chart-1)",
         popover: { DEFAULT: "hsl(var(--popover))", foreground: "hsl(var(--popover-foreground))" },
         card: { DEFAULT: "hsl(var(--card))", foreground: "hsl(var(--card-foreground))" },
       },
@@ -29,8 +38,10 @@ module.exports = {
         sm: "calc(var(--radius) - 4px)",
       },
       fontFamily: {
-        sans: ["Inter", "ui-sans-serif", "system-ui", "-apple-system", "Segoe UI", "Roboto", "sans-serif"],
-        mono: ["JetBrains Mono", "ui-monospace", "Cascadia Code", "Consolas", "monospace"],
+        // Loaded with next/font in _app (self-hosted at build time).
+        display: ["var(--font-display)", "ui-sans-serif", "system-ui", "sans-serif"],
+        sans: ["var(--font-sans)", "ui-sans-serif", "system-ui", "-apple-system", "Segoe UI", "sans-serif"],
+        mono: ["var(--font-mono)", "ui-monospace", "Cascadia Code", "Consolas", "monospace"],
       },
       keyframes: {
         "accordion-down": { from: { height: "0" }, to: { height: "var(--radix-accordion-content-height)" } },
