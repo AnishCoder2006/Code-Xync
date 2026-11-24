@@ -12,7 +12,8 @@ services:
       - ./nginx.conf:/etc/nginx/nginx.conf:ro
     depends_on:
       - api
-      - sync
+      - sync1
+      - sync2
 
   api:
     build: ../../services/api
@@ -21,10 +22,25 @@ services:
     expose:
       - "4000"
 
-  sync:
+  # Two sync nodes (Week 4 Task 6). Nginx balances WebSockets and HTTP across both;
+  # Redis Pub/Sub relays edits between them. NODE_ID shows up in /health and logs.
+  sync1:
     build: ../../services/sync
     restart: unless-stopped
     env_file: ../../.env
+    environment:
+      NODE_ID: sync1
+      SYNC_PORT: "4001"
+    expose:
+      - "4001"
+
+  sync2:
+    build: ../../services/sync
+    restart: unless-stopped
+    env_file: ../../.env
+    environment:
+      NODE_ID: sync2
+      SYNC_PORT: "4001"
     expose:
       - "4001"
 

@@ -228,7 +228,10 @@ router.post("/:jobId/ready", async (req: Request, res: Response) => {
     const { jobId } = req.params;
     const readyKey = `execution:ready:${jobId}`;
     await redisConnection.lpush(readyKey, "1");
-    await redisConnection.expire(readyKey, 30);
+    // Must outlive the job's time in the queue: with a 30 s TTL, jobs queued longer
+    // lost their signal and the worker waited the full 5 s for it (Phase 6 B2). The
+    // worker pops the key when it runs; the TTL only cleans up jobs that never run.
+    await redisConnection.expire(readyKey, 600);
     res.json({ ok: true });
   } catch (err) {
     logger.error({ err }, "Failed to signal execution ready");

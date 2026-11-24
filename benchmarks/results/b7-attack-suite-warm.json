@@ -1,0 +1,104 @@
+{
+ "name": "b7-attack-suite-warm",
+ "timestamp": "2026-11-24T11:21:39.271Z",
+ "conditions": {
+  "warm_pool_size_per_language": 2
+ },
+ "results": [
+  {
+   "payload": "fork-bomb.sh",
+   "expected": "timeout/failed (pids-limited), host responsive",
+   "actualStatus": "timeout",
+   "exitCode": 124,
+   "contained": true,
+   "leftoverContainers": 0,
+   "notes": "Contained & cleaned up",
+   "passed": true,
+   "sandbox": "fresh"
+  },
+  {
+   "payload": "infinite-output.py",
+   "expected": "Truncated at 1MB output cap",
+   "actualStatus": "truncated",
+   "exitCode": null,
+   "contained": true,
+   "leftoverContainers": 0,
+   "notes": "Contained & cleaned up",
+   "passed": true,
+   "sandbox": "warm"
+  },
+  {
+   "payload": "memory-hog.py",
+   "expected": "OOM-killed at 256MB (exit 137)",
+   "actualStatus": "killed",
+   "exitCode": 137,
+   "contained": true,
+   "leftoverContainers": 0,
+   "notes": "Contained & cleaned up",
+   "passed": true,
+   "sandbox": "warm"
+  },
+  {
+   "payload": "network-call.py",
+   "expected": "Fails: network isolated (--network none)",
+   "actualStatus": "failed",
+   "exitCode": 1,
+   "contained": true,
+   "leftoverContainers": 0,
+   "notes": "Contained & cleaned up",
+   "passed": true,
+   "sandbox": "warm"
+  },
+  {
+   "payload": "read-sensitive-file.py",
+   "expected": "Shows container passwd only, no host files",
+   "actualStatus": "passed",
+   "exitCode": 0,
+   "contained": true,
+   "leftoverContainers": 0,
+   "notes": "Contained & cleaned up",
+   "passed": true,
+   "sandbox": "warm"
+  },
+  {
+   "payload": "sleep-beyond-timeout.py",
+   "expected": "Killed at 5s timeout",
+   "actualStatus": "timeout",
+   "exitCode": 124,
+   "contained": true,
+   "leftoverContainers": 0,
+   "notes": "Contained & cleaned up",
+   "passed": true,
+   "sandbox": "warm"
+  },
+  {
+   "payload": "tmpfs-fill.py",
+   "expected": "Fails: 16MB tmpfs limit (No space left on device)",
+   "actualStatus": "failed",
+   "exitCode": 1,
+   "contained": true,
+   "leftoverContainers": 0,
+   "notes": "Contained & cleaned up",
+   "passed": true,
+   "sandbox": "warm"
+  },
+  {
+   "payload": "write-to-root.py",
+   "expected": "Fails: read-only root filesystem",
+   "actualStatus": "failed",
+   "exitCode": 1,
+   "contained": true,
+   "leftoverContainers": 0,
+   "notes": "Contained & cleaned up",
+   "passed": true,
+   "sandbox": "warm"
+  }
+ ],
+ "summary": {
+  "total": 8,
+  "passed": 8,
+  "via_warm_pool": 7,
+  "leftover_containers": 0,
+  "log": "benchmarks/results/logs/b7-attack-suite-warm.log"
+ }
+}

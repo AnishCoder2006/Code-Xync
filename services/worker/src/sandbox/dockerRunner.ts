@@ -1,10 +1,12 @@
-import { spawn, execFile } from "child_process";
+import { spawn, execFile, ChildProcessWithoutNullStreams } from "child_process";
 import { promisify } from "util";
 import fs from "fs/promises";
 import path from "path";
 import os from "os";
 import Redis from "ioredis";
 import { SANDBOX_LIMITS } from "./limits";
+import { hardeningArgs } from "./hardening";
+import { warmPool } from "./warmPool";
 import { prisma } from "../lib/prisma";
 
 const execFileAsync = promisify(execFile);
@@ -18,13 +20,46 @@ export interface ExecutionResult {
   runTimeMs: number;
   stdoutTrunc: string;
   stderrTrunc: string;
+  /** Container the job actually ran in (fresh: codesync-job-<id>; warm: codesync-warm-<uuid>). */
+  containerName?: string;
+  /** "warm" = pre-started single-use container (B7), "fresh" = new container for this job. */
+  sandbox?: "warm" | "fresh";
 }
+
+/** Containers currently running a job (fresh or warm), for worker shutdown cleanup. */
+export const runningContainers = new Set<string>();
 
 export interface SnapshotOptions {
   files?: Record<string, string>;
   command?: string[];
   isSnapshot?: boolean;
+  /** BullMQ timestamps for the Phase 6 B2 timing record (ms since epoch). */
+  enqueuedAt?: number;
+  pickedAt?: number;
 }
+
+/**
+ * Phase 6 B2: per-job timing, written to Redis hash execution:timing:<jobId> (TTL 1h).
+ *   enqueuedAt   BullMQ job.timestamp (API called queue.add)
+ *   pickedAt     BullMQ job.processedOn (a worker slot took the job)
+ *   readyAt      interactive jobs: terminal "ready" signal received (or 5s wait expired)
+ *   dockerSpawnAt  `docker run` spawned (container start begins)
+ *   firstOutputAt  first byte on the container's stdout/stderr
+ *   exitAt       docker run process exited
+ * Measurement only: no sandbox flag or limit depends on it.
+ */
+const writeTiming = async (redis: Redis, jobId: string, t: Record<string, number | string | undefined>) => {
+  try {
+    const flat: string[] = [];
+    for (const [k, v] of Object.entries(t)) if (v !== undefined) flat.push(k, String(v));
+    if (flat.length) {
+      await redis.hset(`execution:timing:${jobId}`, ...flat);
+      await redis.expire(`execution:timing:${jobId}`, 3600);
+    }
+  } catch {
+    /* timing is best-effort */
+  }
+};
 
 export const runInDocker = async (
   jobId: string,
@@ -34,7 +69,8 @@ export const runInDocker = async (
   redis: Redis,
   snapshotOptions?: SnapshotOptions
 ): Promise<ExecutionResult> => {
-  const containerName = `codesync-job-${jobId}`;
+  // Reassigned to the warm container's name when the job claims one from the pool.
+  let containerName = `codesync-job-${jobId}`;
   const channel = `room:${roomId}:execution:${jobId}`;
   const readyKey = `execution:ready:${jobId}`;
   const startedKey = `execution:started:${jobId}`;
@@ -65,14 +101,32 @@ export const runInDocker = async (
   }
 
   let timeoutTimer: NodeJS.Timeout | null = null;
+  const timing: Record<string, number | string | undefined> = {
+    enqueuedAt: snapshotOptions?.enqueuedAt,
+    pickedAt: snapshotOptions?.pickedAt,
+    language,
+  };
 
   try {
     // Only wait for ready signal on interactive jobs (skip for snapshot / AI jobs)
     if (!isSnapshot) {
-      const readyResult = await redis.blpop(readyKey, 5);
+      // BLPOP on a DEDICATED short-lived connection. `redis` here is the worker's
+      // BullMQ connection; blocking it for up to 5 s delayed BullMQ's lock renewal
+      // (lockDuration 10 s), so jobs were marked stalled, re-run while still running,
+      // and failed (Phase 6 B2: 115 of 118 failed jobs, see
+      // benchmarks/results/evidence/b2-before-stall-fix/stall-analysis.json).
+      const blocking = redis.duplicate();
+      let readyResult: [string, string] | null;
+      try {
+        readyResult = await blocking.blpop(readyKey, 5);
+      } finally {
+        blocking.disconnect();
+      }
       if (!readyResult) {
         console.warn(`[worker] job ${jobId}: no ready signal in 5s, proceeding anyway`);
       }
+      timing.readyAt = Date.now();
+      timing.readySignal = readyResult ? "received" : "timeout";
     }
 
     // Idempotency check: only publish "start" if this job hasn't already started
@@ -92,22 +146,15 @@ export const runInDocker = async (
 
     const image = isPython || isBash ? "codesync-sandbox-python" : "codesync-sandbox-node";
 
-    // Docker run flags constructed from SANDBOX_LIMITS
-    const dockerArgs = [
-      "run",
-      "--name", containerName,
-      "--rm",
-      "--network", "none",
-      "--read-only",
-      "--tmpfs", `/tmp:rw,size=${SANDBOX_LIMITS.tmpfsSizeMb}m,noexec,nosuid`,
-      "--user", SANDBOX_LIMITS.user,
-      "--cap-drop", SANDBOX_LIMITS.capDrop,
-      "--security-opt", SANDBOX_LIMITS.securityOpt,
-      "--memory", `${SANDBOX_LIMITS.memoryMb}m`,
-      "--memory-swap", `${SANDBOX_LIMITS.memoryMb}m`,
-      "--cpus", `${SANDBOX_LIMITS.cpus}`,
-      "--pids-limit", `${SANDBOX_LIMITS.pidsLimit}`,
-    ];
+    // Docker run flags constructed from SANDBOX_LIMITS (hardening.ts: shared with the warm pool)
+    const dockerArgs = ["run", "--name", containerName, "--rm", ...hardeningArgs()];
+
+    // B7: interactive single-file node/python jobs may take a pre-started, single-use
+    // container from the warm pool (same hardening flags); the program is piped over stdin.
+    // Snapshot (AI test) and bash jobs always use a fresh container.
+    const warm = !isSnapshot && !isBash ? warmPool.claim(isPython ? "python" : "javascript") : null;
+    if (warm) containerName = warm.name;
+    timing.sandbox = warm ? "warm" : "fresh";
 
     if (isSnapshot) {
       dockerArgs.push("-v", `${tmpDir}:/app:ro`);
@@ -152,7 +199,20 @@ export const runInDocker = async (
       const maxDbChars = SANDBOX_LIMITS.maxDbLogChars;
 
       const startTime = Date.now();
-      const child = spawn("docker", dockerArgs);
+      timing.dockerSpawnAt = startTime; // warm: the moment the job claimed its container
+      // Warm containers are spawned with stdio "pipe" too, so the streams always exist.
+      const child = (warm ? warm.child : spawn("docker", dockerArgs)) as ChildProcessWithoutNullStreams;
+      runningContainers.add(containerName);
+      // Warm: hand the program over once every listener below is attached (same tick).
+      if (warm) setImmediate(() => warm.child.stdin?.end(code));
+      const markFirstOutput = () => {
+        if (timing.firstOutputAt === undefined) timing.firstOutputAt = Date.now();
+      };
+      child.stdout?.once("data", markFirstOutput);
+      child.stderr?.once("data", markFirstOutput);
+      child.once("close", () => {
+        timing.exitAt = Date.now();
+      });
 
       child.on("error", (err) => {
         if (isDone) return;
@@ -207,6 +267,8 @@ export const runInDocker = async (
           runTimeMs,
           stdoutTrunc: stdoutAccum,
           stderrTrunc: stderrAccum,
+          containerName,
+          sandbox: warm ? "warm" : "fresh",
         };
         await redis.set(`execution:result:${jobId}`, JSON.stringify(timeoutResult), "EX", 300);
         resolve(timeoutResult);
@@ -334,12 +396,15 @@ export const runInDocker = async (
           runTimeMs,
           stdoutTrunc: stdoutAccum,
           stderrTrunc: stderrAccum,
+          containerName,
+          sandbox: warm ? "warm" : "fresh",
         };
         await redis.set(`execution:result:${jobId}`, JSON.stringify(executionResult), "EX", 300);
         resolve(executionResult);
       });
     });
   } finally {
+    await writeTiming(redis, jobId, timing);
     // Timer and container + temp dir cleanup happens in finally block in all exit paths
     if (timeoutTimer) {
       clearTimeout(timeoutTimer);
@@ -347,6 +412,7 @@ export const runInDocker = async (
     }
     try {
       await execFileAsync("docker", ["rm", "-f", containerName]).catch(() => {});
+      runningContainers.delete(containerName);
       await fs.rm(tmpDir, { recursive: true, force: true }).catch(() => {});
     } catch (e) {
       console.error("[worker] cleanup error in finally block:", e);

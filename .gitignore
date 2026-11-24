@@ -12,3 +12,10 @@ coverage/
 prisma/migrations/dev.db
 .venv/
 .pytest_cache/
+
+# Self-hosted Monaco copy (apps/web/scripts/copy-monaco.js) and E2E build output
+apps/web/public/monaco/
+apps/web/.next-e2e/
+
+# Playwright run artifacts
+test-results/

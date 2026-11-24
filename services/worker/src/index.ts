@@ -2,7 +2,8 @@ import { Worker, Job } from "bullmq";
 import Redis from "ioredis";
 import { execFile } from "child_process";
 import { promisify } from "util";
-import { runInDocker } from "./sandbox/dockerRunner";
+import { runInDocker, runningContainers } from "./sandbox/dockerRunner";
+import { warmPool } from "./sandbox/warmPool";
 import { prisma } from "./lib/prisma";
 
 const execFileAsync = promisify(execFile);
@@ -30,7 +31,7 @@ const worker = new Worker(
         code || "",
         language,
         redisConnection,
-        { files, command, isSnapshot: isSnapshot || !!files }
+        { files, command, isSnapshot: isSnapshot || !!files, enqueuedAt: job.timestamp, pickedAt: job.processedOn }
       );
       return result;
     } finally {
@@ -101,8 +102,10 @@ const shutdown = async (signal: string) => {
     console.error("[worker] Error closing worker:", err);
   }
 
-  // Kill running containers immediately to release resources
-  for (const containerName of activeContainers) {
+  // Stop the warm pool (idle pre-started containers) and kill running containers
+  // immediately to release resources (warm containers carry their own names).
+  warmPool.stop();
+  for (const containerName of new Set([...activeContainers, ...runningContainers])) {
     console.log(`[worker] Killing running container: ${containerName}`);
     try {
       await execFileAsync("docker", ["rm", "-f", containerName]);
@@ -122,6 +125,7 @@ const shutdown = async (signal: string) => {
 process.on("SIGTERM", () => shutdown("SIGTERM"));
 process.on("SIGINT", () => shutdown("SIGINT"));
 
-console.log(`Execution Worker started with concurrency ${concurrency}...`);
+warmPool.start();
+console.log(`Execution Worker started with concurrency ${concurrency}...${warmPool.enabled ? ` (warm pool: ${process.env.SANDBOX_WARM_POOL_SIZE} per language)` : ""}`);
 
 export { worker, redisConnection };

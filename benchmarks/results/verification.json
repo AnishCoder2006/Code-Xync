@@ -1,0 +1,103 @@
+{
+ "name": "verification",
+ "timestamp": "2026-11-24",
+ "generator": "recorded from the runs made in this session (not re-run, per the owner's instruction to test only untested work); exit codes as observed; tests/verify-all.ts re-runs all of them on demand",
+ "tasks": [
+  {
+   "task": "W4 Task 0+1: room-load race (5 simultaneous clients), NODE_ID, /health",
+   "command": "NODE_ENV=test npx tsx tests/test-task0-task1.ts",
+   "exit_code": 0,
+   "log": "docs/PROGRESS.md (W4 rebuild Task 0+1)"
+  },
+  {
+   "task": "W4 Task 2+3+5: Redis relay, no echo, cold-start sync, awareness",
+   "command": "NODE_ENV=test npx tsx tests/test-multinode-sync.ts",
+   "exit_code": 0,
+   "log": "docs/PROGRESS.md (W4 rebuild Task 2+3+5)"
+  },
+  {
+   "task": "W4 Task 4+5: save lock + merge through the node; ghost presence after node kill",
+   "command": "NODE_ENV=test npx tsx tests/test-task4-5-lock-merge-presence.ts",
+   "exit_code": 0,
+   "log": "docs/PROGRESS.md (W4 rebuild Task 4+5)"
+  },
+  {
+   "task": "W4 Task 6: two nodes behind the LB, clients on different nodes, failover",
+   "command": "NODE_ENV=test npx tsx tests/test-task6-lb.ts",
+   "exit_code": 0,
+   "log": "docs/PROGRESS.md (W4 rebuild Task 6)"
+  },
+  {
+   "task": "W4 Task 8 (protocol): websocket-protocol specs incl. 5 simultaneous clients via Promise.all",
+   "command": "cd tests/sync-protocol && NODE_ENV=test npx playwright test",
+   "exit_code": 0,
+   "log": "docs/PROGRESS.md; 6 passed"
+  },
+  {
+   "task": "W4 Task 9: CI playwright job",
+   "command": ".github/workflows/ci.yml",
+   "exit_code": null,
+   "log": "written, YAML parses; GitHub Actions cannot run on this machine (NOT RUN)"
+  },
+  {
+   "task": "A1: sync imports nothing from services/api; own Prisma client; migrate captures schema",
+   "command": "npx prisma migrate diff --from-config-datasource (migrations-only scratch DB) --to-schema prisma/schema.prisma --exit-code",
+   "exit_code": 0,
+   "log": "docs/PROGRESS.md (A1)"
+  },
+  {
+   "task": "A1: docker build of the sync service alone",
+   "command": "docker build -t codesync-sync:a1 services/sync",
+   "exit_code": 0,
+   "log": "docs/PROGRESS.md (A1); image served room text from Postgres"
+  },
+  {
+   "task": "A2: real-browser suite (convergence, offline x2, node-kill, cross-node Accept, latency), 3 consecutive runs",
+   "command": "cd tests/playwright && NODE_ENV=test npx playwright test (x3)",
+   "exit_code": 0,
+   "log": "benchmarks/results/a2-browser-suite.json"
+  },
+  {
+   "task": "A3: Redis restart, node-2 client converges <20 s, no reconnect, no re-publish",
+   "command": "NODE_ENV=test npx tsx tests/test-a3-redis-restart.ts",
+   "exit_code": 0,
+   "log": "docs/PROGRESS.md (A3)"
+  },
+  {
+   "task": "A4: production build has no /e2e/editor (404, no E2E code)",
+   "command": "npx tsx tests/test-a4-prod-404.ts",
+   "exit_code": 0,
+   "log": "docs/PROGRESS.md (A4)"
+  },
+  {
+   "task": "B2 bug fix: no stalled/duplicated jobs after the fix",
+   "command": "NODE_ENV=test npx tsx benchmarks/queue/queue-startup.ts",
+   "exit_code": 0,
+   "log": "benchmarks/results/logs/b2-run.log"
+  },
+  {
+   "task": "B5: --results-json plumbing (mock provider)",
+   "command": "python benchmarks/ai-eval/run_ai_eval_closed_loop.py --provider mock --count 3 --results-json benchmarks/results/b5-ai-eval-mock.json",
+   "exit_code": 0,
+   "log": "benchmarks/results/b5-ai-eval-mock.json"
+  },
+  {
+   "task": "B7: hardening flags identical, fresh vs warm (docker inspect)",
+   "command": "npx tsx tests/b7-inspect-flags.ts",
+   "exit_code": 0,
+   "log": "benchmarks/results/logs/b7-inspect-flags.log"
+  },
+  {
+   "task": "B7: attack suite with the warm pool on",
+   "command": "SANDBOX_WARM_POOL_SIZE=2 npx tsx benchmarks/attacks/run_attacks.ts",
+   "exit_code": 0,
+   "log": "benchmarks/results/logs/b7-attack-suite-warm.log"
+  },
+  {
+   "task": "B6: document changes only through /accept (200 randomized loops, 2 editors typing)",
+   "command": "NODE_ENV=test npx tsx benchmarks/safety/safety_invariant.ts",
+   "exit_code": 0,
+   "log": "benchmarks/results/logs/b6-safety.log; benchmarks/results/b6-safety-invariant.json"
+  }
+ ]
+}

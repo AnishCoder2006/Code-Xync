@@ -1,0 +1,175 @@
+{
+ "name": "b4-retrieval-in-fix-loop",
+ "title": "Is retrieval used by the fix loop?",
+ "timestamp": "2026-11-24T08:51:06Z",
+ "conditions": {
+  "static_check": "regex over inspect.getsource(node_context_builder) and every line of services/ai/app/agent/*.py",
+  "pattern": "hybrid_search|search_vectors|search_keywords|/search|app\\.rag\\.search|qdrant",
+  "rooms": "single-file: each case's open file indexed alone in its own room (one Yjs doc per room, as the product works today)",
+  "query": "case bug description",
+  "top_k": 5,
+  "search": "app.rag.search.hybrid_search (production)"
+ },
+ "summary": {
+  "context_builder_calls_search": false,
+  "evidence": "node_context_builder source matches: none; agent package matches: 0",
+  "agent_package_matches": [],
+  "cases": 25,
+  "retrieved_lines": 237,
+  "retrieved_lines_already_in_open_file": 237,
+  "retrieved_lines_already_in_open_file_pct": 100.0,
+  "decision": "Not wired: node_context_builder sends the whole open file; in a single-file room every retrieved line is already part of it, so retrieval adds no context today. Revisit when rooms hold several files."
+ },
+ "per_case": [
+  {
+   "case": "case_01_pagination",
+   "results": 3,
+   "retrieved_lines": 12,
+   "already_in_open_file": 12
+  },
+  {
+   "case": "case_02_jwt_auth",
+   "results": 3,
+   "retrieved_lines": 11,
+   "already_in_open_file": 11
+  },
+  {
+   "case": "case_03_tax_calc",
+   "results": 3,
+   "retrieved_lines": 12,
+   "already_in_open_file": 12
+  },
+  {
+   "case": "case_04_cache_ttl",
+   "results": 5,
+   "retrieved_lines": 23,
+   "already_in_open_file": 23
+  },
+  {
+   "case": "case_05_rate_limiter",
+   "results": 3,
+   "retrieved_lines": 10,
+   "already_in_open_file": 10
+  },
+  {
+   "case": "case_06_markdown_parser",
+   "results": 2,
+   "retrieved_lines": 26,
+   "already_in_open_file": 26
+  },
+  {
+   "case": "case_07_email_validator",
+   "results": 3,
+   "retrieved_lines": 11,
+   "already_in_open_file": 11
+  },
+  {
+   "case": "case_08_retry_backoff",
+   "results": 2,
+   "retrieved_lines": 8,
+   "already_in_open_file": 8
+  },
+  {
+   "case": "case_09_query_builder",
+   "results": 3,
+   "retrieved_lines": 15,
+   "already_in_open_file": 15
+  },
+  {
+   "case": "case_10_queue_stats",
+   "results": 2,
+   "retrieved_lines": 7,
+   "already_in_open_file": 7
+  },
+  {
+   "case": "case_11_string_truncate",
+   "results": 2,
+   "retrieved_lines": 8,
+   "already_in_open_file": 8
+  },
+  {
+   "case": "case_12_url_join",
+   "results": 2,
+   "retrieved_lines": 6,
+   "already_in_open_file": 6
+  },
+  {
+   "case": "case_13_hex_color",
+   "results": 2,
+   "retrieved_lines": 9,
+   "already_in_open_file": 9
+  },
+  {
+   "case": "case_14_user_age",
+   "results": 1,
+   "retrieved_lines": 4,
+   "already_in_open_file": 4
+  },
+  {
+   "case": "case_15_binary_search",
+   "results": 1,
+   "retrieved_lines": 14,
+   "already_in_open_file": 14
+  },
+  {
+   "case": "case_16_clamp_value",
+   "results": 1,
+   "retrieved_lines": 8,
+   "already_in_open_file": 8
+  },
+  {
+   "case": "case_17_levenshtein",
+   "results": 1,
+   "retrieved_lines": 3,
+   "already_in_open_file": 3
+  },
+  {
+   "case": "case_18_cookie_parser",
+   "results": 1,
+   "retrieved_lines": 10,
+   "already_in_open_file": 10
+  },
+  {
+   "case": "case_19_slugify",
+   "results": 1,
+   "retrieved_lines": 3,
+   "already_in_open_file": 3
+  },
+  {
+   "case": "case_20_median",
+   "results": 1,
+   "retrieved_lines": 7,
+   "already_in_open_file": 7
+  },
+  {
+   "case": "case_21_deep_clone",
+   "results": 1,
+   "retrieved_lines": 5,
+   "already_in_open_file": 5
+  },
+  {
+   "case": "case_22_ip_filter",
+   "results": 1,
+   "retrieved_lines": 3,
+   "already_in_open_file": 3
+  },
+  {
+   "case": "case_23_cron_interval",
+   "results": 1,
+   "retrieved_lines": 4,
+   "already_in_open_file": 4
+  },
+  {
+   "case": "case_24_fizzbuzz_ext",
+   "results": 1,
+   "retrieved_lines": 9,
+   "already_in_open_file": 9
+  },
+  {
+   "case": "case_25_semantic_version",
+   "results": 1,
+   "retrieved_lines": 9,
+   "already_in_open_file": 9
+  }
+ ]
+}

@@ -1,0 +1,91 @@
+{
+ "schema": "codesync-ai-eval/v1",
+ "name": "b5-ai-eval",
+ "timestamp": "2026-11-24T11:25:38Z",
+ "git": {
+  "commit": null,
+  "commit_note": "branch has no commits; results come from the uncommitted working tree",
+  "last_pushed_commit": "652296a6ff2656d1765588be5606f409a44ce3c9"
+ },
+ "environment": {
+  "os": "Windows 11 (AMD64)",
+  "cpu": "Intel64 Family 6 Model 170 Stepping 4, GenuineIntel",
+  "logical_cpus": 18,
+  "python": "3.12.10",
+  "docker": "client 28.1.1 / server 28.1.1"
+ },
+ "provider": "mock",
+ "model_requested": "mock-llm",
+ "models_reported_by_provider": [
+  "mock-llm"
+ ],
+ "cases": [
+  {
+   "idx": 1,
+   "id": "case_01_pagination",
+   "title": "Off-by-one in pagination offset",
+   "status": "exhausted",
+   "calls": 3,
+   "attempts": 3,
+   "retries": 2,
+   "prompt_tokens": null,
+   "completion_tokens": null,
+   "tokens": null,
+   "cost_usd": 0.0,
+   "time_s": 20.68,
+   "provider_latency_ms_total": 0.3,
+   "models_reported": [
+    "mock-llm"
+   ]
+  },
+  {
+   "idx": 2,
+   "id": "case_02_jwt_auth",
+   "title": "Token expiry timestamp verification unit mismatch",
+   "status": "apply_error",
+   "calls": 3,
+   "attempts": 3,
+   "retries": 2,
+   "prompt_tokens": null,
+   "completion_tokens": null,
+   "tokens": null,
+   "cost_usd": 0.0,
+   "time_s": 0.18,
+   "provider_latency_ms_total": 0.1,
+   "models_reported": [
+    "mock-llm"
+   ]
+  },
+  {
+   "idx": 3,
+   "id": "case_03_tax_calc",
+   "title": "Tax rounding truncation error",
+   "status": "apply_error",
+   "calls": 3,
+   "attempts": 3,
+   "retries": 2,
+   "prompt_tokens": null,
+   "completion_tokens": null,
+   "tokens": null,
+   "cost_usd": 0.0,
+   "time_s": 0.19,
+   "provider_latency_ms_total": 2.2,
+   "models_reported": [
+    "mock-llm"
+   ]
+  }
+ ],
+ "summary": {
+  "cases_evaluated": 3,
+  "verified_first_attempt": 0,
+  "verified_after_retry": 0,
+  "verified_total": 0,
+  "total_tokens": null,
+  "total_cost_usd": 0.0
+ },
+ "notes": [
+  "time_s is end-to-end fix time per case: LLM provider latency + edit apply + sandbox test runs (+ retries).",
+  "attempts = LLM calls made for the case (1 + regenerations after failed sandbox tests).",
+  "Token counts are null when the provider did not report them; cost_usd is the provider-reported/estimated cost."
+ ]
+}

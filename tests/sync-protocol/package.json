@@ -1,0 +1,12 @@
+{
+  "name": "@codesync/tests-sync-protocol",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "test": "playwright test"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.46.0"
+  },
+  "description": "WebSocket-protocol specs (y-protocols clients, no browser). Not browser tests."
+}

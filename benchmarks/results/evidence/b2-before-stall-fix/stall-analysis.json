@@ -1,0 +1,860 @@
+{
+ "name": "b2-stall-analysis",
+ "timestamp": "2026-11-24T10:48:09.553Z",
+ "finding": "Interactive jobs that wait >30s in the queue lose their ready signal (API sets EXPIRE 30 on execution:ready:<jobId>); the worker then BLPOPs for 5s on the SAME ioredis connection BullMQ uses for lock renewal (lockDuration 10s), the lock lapses, BullMQ marks the job stalled, re-runs it while the first run continues, and fails it after maxStalledCount.",
+ "queue_counts": {
+  "waiting": 18,
+  "active": 4,
+  "delayed": 0,
+  "completed": 879,
+  "failed": 118,
+  "paused": 0
+ },
+ "failed": {
+  "n": 118,
+  "by_queue_wait_and_ready": {
+   ">30s|ready=timeout": 115,
+   ">30s|ready=null": 3
+  },
+  "reasons": [
+   "job stalled more than allowable limit"
+  ]
+ },
+ "completed": {
+  "n": 879,
+  "by_queue_wait_and_ready": {
+   ">30s|ready=timeout": 217,
+   "<=30s|ready=received": 658,
+   ">30s|ready=received": 1,
+   ">30s|ready=null": 3
+  }
+ },
+ "failed_jobs": [
+  {
+   "id": "da185ed8-b61a-430e-bbb8-c207a95213db",
+   "queued_ms": 145331,
+   "ready": "timeout",
+   "attemptsMade": 1,
+   "failedReason": "job stalled more than allowable limit"
+  },
+  {
+   "id": "5574c66f-615b-44ab-809f-7dfdb4c89719",
+   "queued_ms": 140085,
+   "ready": "timeout",
+   "attemptsMade": 1,
+   "failedReason": "job stalled more than allowable limit"
+  },
+  {
+   "id": "5dae1d78-90b7-45e6-be3c-8fb7267a4e6d",
+   "queued_ms": 114262,
+   "ready": "timeout",
+   "attemptsMade": 1,
+   "failedReason": "job stalled more than allowable limit"
+  },
+  {
+   "id": "8b6e2832-e193-4ec2-a5f4-5feed05ac42e",
+   "queued_ms": 93672,
+   "ready": "timeout",
+   "attemptsMade": 1,
+   "failedReason": "job stalled more than allowable limit"
+  },
+  {
+   "id": "7adbcba8-d29f-447e-af07-ce3b34eaf803",
+   "queued_ms": 83474,
+   "ready": "timeout",
+   "attemptsMade": 1,
+   "failedReason": "job stalled more than allowable limit"
+  },
+  {
+   "id": "c6d75806-388c-4a33-972b-5c86e9d2accb",
+   "queued_ms": 78334,
+   "ready": "timeout",
+   "attemptsMade": 1,
+   "failedReason": "job stalled more than allowable limit"
+  },
+  {
+   "id": "be9490e1-8fb3-4d40-9bf3-b87c3274f821",
+   "queued_ms": 814200,
+   "ready": "timeout",
+   "attemptsMade": 1,
+   "failedReason": "job stalled more than allowable limit"
+  },
+  {
+   "id": "53087e31-b00d-40cc-8b26-28730a6ffe89",
+   "queued_ms": 814200,
+   "ready": "timeout",
+   "attemptsMade": 1,
+   "failedReason": "job stalled more than allowable limit"
+  },
+  {
+   "id": "e8ea4557-0103-4ce0-920f-6240ab19f29a",
+   "queued_ms": 794302,
+   "ready": "timeout",
+   "attemptsMade": 1,
+   "failedReason": "job stalled more than allowable limit"
+  },
+  {
+   "id": "6c04ffe5-64e7-4f97-aa96-4de4962439de",
+   "queued_ms": 794302,
+   "ready": "timeout",
+   "attemptsMade": 1,
+   "failedReason": "job stalled more than allowable limit"
+  },
+  {
+   "id": "416ccf54-2c2a-4c96-be0c-8e7511147498",
+   "queued_ms": 762961,
+   "ready": "timeout",
+   "attemptsMade": 1,
+   "failedReason": "job stalled more than allowable limit"
+  },
+  {
+   "id": "4c37146d-cc4a-420c-8fcb-34a5e3e90d34",
+   "queued_ms": 762959,
+   "ready": "timeout",
+   "attemptsMade": 1,
+   "failedReason": "job stalled more than allowable limit"
+  },
+  {
+   "id": "d77ea087-4631-47ae-8015-985378f2e4d9",
+   "queued_ms": 731622,
+   "ready": "timeout",
+   "attemptsMade": 1,
+   "failedReason": "job stalled more than allowable limit"
+  },
+  {
+   "id": "b8385518-c8e1-4e29-9afe-128f64c46993",
+   "queued_ms": 731623,
+   "ready": "timeout",
+   "attemptsMade": 1,
+   "failedReason": "job stalled more than allowable limit"
+  },
+  {
+   "id": "59f5b6ec-4a19-4315-b859-bd3b1749dcb7",
+   "queued_ms": 700306,
+   "ready": "timeout",
+   "attemptsMade": 1,
+   "failedReason": "job stalled more than allowable limit"
+  },
+  {
+   "id": "0c158297-a273-40aa-b706-1a7afe43f2f5",
+   "queued_ms": 700306,
+   "ready": "timeout",
+   "attemptsMade": 1,
+   "failedReason": "job stalled more than allowable limit"
+  },
+  {
+   "id": "4492610f-a6e4-49e7-8024-c3f28d5ce969",
+   "queued_ms": 668967,
+   "ready": "timeout",
+   "attemptsMade": 1,
+   "failedReason": "job stalled more than allowable limit"
+  },
+  {
+   "id": "d151f7c9-c238-4bbb-abde-3f38ecadf0b4",
+   "queued_ms": 668967,
+   "ready": "timeout",
+   "attemptsMade": 1,
+   "failedReason": "job stalled more than allowable limit"
+  },
+  {
+   "id": "7cd9c356-dbd4-4a82-9360-c9bfac1f3518",
+   "queued_ms": 637580,
+   "ready": "timeout",
+   "attemptsMade": 1,
+   "failedReason": "job stalled more than allowable limit"
+  },
+  {
+   "id": "177e0863-a25a-4cde-ba38-95bdea5a8f23",
+   "queued_ms": 637579,
+   "ready": "timeout",
+   "attemptsMade": 1,
+   "failedReason": "job stalled more than allowable limit"
+  },
+  {
+   "id": "0b3fa96c-220c-4c70-8c2e-6a111c22227b",
+   "queued_ms": 606368,
+   "ready": "timeout",
+   "attemptsMade": 1,
+   "failedReason": "job stalled more than allowable limit"
+  },
+  {
+   "id": "ae6bd246-09bd-4a1d-8e6f-afd5ca409358",
+   "queued_ms": 606367,
+   "ready": "timeout",
+   "attemptsMade": 1,
+   "failedReason": "job stalled more than allowable limit"
+  },
+  {
+   "id": "31332f24-aaed-4bc8-8e33-a76534352390",
+   "queued_ms": 574890,
+   "ready": "timeout",
+   "attemptsMade": 1,
+   "failedReason": "job stalled more than allowable limit"
+  },
+  {
+   "id": "247c812d-3889-483e-b787-f62e6a02b028",
+   "queued_ms": 574889,
+   "ready": "timeout",
+   "attemptsMade": 1,
+   "failedReason": "job stalled more than allowable limit"
+  },
+  {
+   "id": "56f848ca-677c-4eb5-9f29-dea4863eeeef",
+   "queued_ms": 543360,
+   "ready": "timeout",
+   "attemptsMade": 1,
+   "failedReason": "job stalled more than allowable limit"
+  },
+  {
+   "id": "4ce93741-d373-4d13-a931-fc7f88d99a25",
+   "queued_ms": 543360,
+   "ready": "timeout",
+   "attemptsMade": 1,
+   "failedReason": "job stalled more than allowable limit"
+  },
+  {
+   "id": "59362c47-bb98-4f39-bc9f-660dae6d2d18",
+   "queued_ms": 511918,
+   "ready": "timeout",
+   "attemptsMade": 1,
+   "failedReason": "job stalled more than allowable limit"
+  },
+  {
+   "id": "80c6f7de-8b0f-4a3f-b51f-567e402156a4",
+   "queued_ms": 511919,
+   "ready": "timeout",
+   "attemptsMade": 1,
+   "failedReason": "job stalled more than allowable limit"
+  },
+  {
+   "id": "d32ca752-67c2-46b7-9b8b-825349d04411",
+   "queued_ms": 480265,
+   "ready": "timeout",
+   "attemptsMade": 1,
+   "failedReason": "job stalled more than allowable limit"
+  },
+  {
+   "id": "e8c94be1-dd4d-41b1-adda-a34beeb9434c",
+   "queued_ms": 480265,
+   "ready": "timeout",
+   "attemptsMade": 1,
+   "failedReason": "job stalled more than allowable limit"
+  },
+  {
+   "id": "090b74b2-8770-4895-b5a4-56c1edb5ddd8",
+   "queued_ms": 449048,
+   "ready": "timeout",
+   "attemptsMade": 1,
+   "failedReason": "job stalled more than allowable limit"
+  },
+  {
+   "id": "6eac10d7-c90f-423a-b5a9-128a3f0bb43d",
+   "queued_ms": 449044,
+   "ready": "timeout",
+   "attemptsMade": 1,
+   "failedReason": "job stalled more than allowable limit"
+  },
+  {
+   "id": "c380c420-c6d1-4de4-b787-e4976c8810e6",
+   "queued_ms": 417626,
+   "ready": "timeout",
+   "attemptsMade": 1,
+   "failedReason": "job stalled more than allowable limit"
+  },
+  {
+   "id": "eaa5021d-3974-499a-b830-a81496f8a3aa",
+   "queued_ms": 417627,
+   "ready": "timeout",
+   "attemptsMade": 1,
+   "failedReason": "job stalled more than allowable limit"
+  },
+  {
+   "id": "1b50f3da-8229-4613-8ccc-3443a208f57a",
+   "queued_ms": 386307,
+   "ready": "timeout",
+   "attemptsMade": 1,
+   "failedReason": "job stalled more than allowable limit"
+  },
+  {
+   "id": "ea34400c-1dd4-4f54-abff-b612236c76b3",
+   "queued_ms": 386307,
+   "ready": "timeout",
+   "attemptsMade": 1,
+   "failedReason": "job stalled more than allowable limit"
+  },
+  {
+   "id": "541517da-e1b0-4c28-9609-44820d813ddd",
+   "queued_ms": 355029,
+   "ready": "timeout",
+   "attemptsMade": 1,
+   "failedReason": "job stalled more than allowable limit"
+  },
+  {
+   "id": "88ba6fe7-bfca-4c19-91f7-fe0698b55d87",
+   "queued_ms": 355027,
+   "ready": "timeout",
+   "attemptsMade": 1,
+   "failedReason": "job stalled more than allowable limit"
+  },
+  {
+   "id": "cacf5d39-ad90-4e1a-9556-980c18dfc2aa",
+   "queued_ms": 323585,
+   "ready": "timeout",
+   "attemptsMade": 1,
+   "failedReason": "job stalled more than allowable limit"
+  },
+  {
+   "id": "c7be8805-8cb6-4a66-bb1e-44eb17926f3c",
+   "queued_ms": 323584,
+   "ready": "timeout",
+   "attemptsMade": 1,
+   "failedReason": "job stalled more than allowable limit"
+  },
+  {
+   "id": "867cb272-df4c-4137-934d-450815bfcdde",
+   "queued_ms": 291974,
+   "ready": "timeout",
+   "attemptsMade": 1,
+   "failedReason": "job stalled more than allowable limit"
+  },
+  {
+   "id": "d0b08444-e833-4615-a48d-772604829b45",
+   "queued_ms": 291975,
+   "ready": "timeout",
+   "attemptsMade": 1,
+   "failedReason": "job stalled more than allowable limit"
+  },
+  {
+   "id": "4b9c1e33-40ef-49c0-bf68-0f803c2ca12e",
+   "queued_ms": 260436,
+   "ready": "timeout",
+   "attemptsMade": 1,
+   "failedReason": "job stalled more than allowable limit"
+  },
+  {
+   "id": "f18f50b4-98c5-46f1-a17c-04cd0d494e33",
+   "queued_ms": 260440,
+   "ready": "timeout",
+   "attemptsMade": 1,
+   "failedReason": "job stalled more than allowable limit"
+  },
+  {
+   "id": "9494a8ee-dbc4-4cfb-8ed2-be2cf27ddb86",
+   "queued_ms": 229168,
+   "ready": "timeout",
+   "attemptsMade": 1,
+   "failedReason": "job stalled more than allowable limit"
+  },
+  {
+   "id": "90ecf530-70c8-4130-989f-8c455a46251d",
+   "queued_ms": 229170,
+   "ready": "timeout",
+   "attemptsMade": 1,
+   "failedReason": "job stalled more than allowable limit"
+  },
+  {
+   "id": "1a000eca-9c84-474f-8de8-6cf66145156f",
+   "queued_ms": 197956,
+   "ready": "timeout",
+   "attemptsMade": 1,
+   "failedReason": "job stalled more than allowable limit"
+  },
+  {
+   "id": "4914d2b1-586e-4f74-bbe3-b2fd18a0d8fa",
+   "queued_ms": 197955,
+   "ready": "timeout",
+   "attemptsMade": 1,
+   "failedReason": "job stalled more than allowable limit"
+  },
+  {
+   "id": "91d65f21-c2c4-46b0-8f20-94098d790c0b",
+   "queued_ms": 166781,
+   "ready": "timeout",
+   "attemptsMade": 1,
+   "failedReason": "job stalled more than allowable limit"
+  },
+  {
+   "id": "f283bfd1-6ce0-4f74-9516-e17426c28abc",
+   "queued_ms": 166781,
+   "ready": "timeout",
+   "attemptsMade": 1,
+   "failedReason": "job stalled more than allowable limit"
+  },
+  {
+   "id": "f67f4947-8185-4303-90fa-492c24f1b3a3",
+   "queued_ms": 135559,
+   "ready": "timeout",
+   "attemptsMade": 1,
+   "failedReason": "job stalled more than allowable limit"
+  },
+  {
+   "id": "b2f7b477-b312-4350-8a3b-2c6b8e0dd0b2",
+   "queued_ms": 135558,
+   "ready": "timeout",
+   "attemptsMade": 1,
+   "failedReason": "job stalled more than allowable limit"
+  },
+  {
+   "id": "4805fad0-c6c7-4737-92b8-810fb8f5edef",
+   "queued_ms": 104060,
+   "ready": "timeout",
+   "attemptsMade": 1,
+   "failedReason": "job stalled more than allowable limit"
+  },
+  {
+   "id": "a0cf25a7-2dea-489a-8259-88987283f3c9",
+   "queued_ms": 104060,
+   "ready": "timeout",
+   "attemptsMade": 1,
+   "failedReason": "job stalled more than allowable limit"
+  },
+  {
+   "id": "05c15dec-3cec-4e4e-a723-9f80d457853f",
+   "queued_ms": 93568,
+   "ready": "timeout",
+   "attemptsMade": 1,
+   "failedReason": "job stalled more than allowable limit"
+  },
+  {
+   "id": "e43138dc-682b-41a1-ad5e-c112aa7a5483",
+   "queued_ms": 93570,
+   "ready": "timeout",
+   "attemptsMade": 1,
+   "failedReason": "job stalled more than allowable limit"
+  },
+  {
+   "id": "fd15305b-0156-4f52-9a01-5a01f358eaec",
+   "queued_ms": 670591,
+   "ready": "timeout",
+   "attemptsMade": 1,
+   "failedReason": "job stalled more than allowable limit"
+  },
+  {
+   "id": "ba76eae1-048e-4857-8826-f55802a8cf86",
+   "queued_ms": 665523,
+   "ready": "timeout",
+   "attemptsMade": 1,
+   "failedReason": "job stalled more than allowable limit"
+  },
+  {
+   "id": "a957e72f-777c-41c8-a02a-ea260d7bc7aa",
+   "queued_ms": 665522,
+   "ready": "timeout",
+   "attemptsMade": 1,
+   "failedReason": "job stalled more than allowable limit"
+  },
+  {
+   "id": "2cf7afa1-1137-4121-aa2f-94459b6873b4",
+   "queued_ms": 644870,
+   "ready": "timeout",
+   "attemptsMade": 1,
+   "failedReason": "job stalled more than allowable limit"
+  },
+  {
+   "id": "bbe3056c-45a3-41a1-b0a0-cad3ee2a9444",
+   "queued_ms": 618399,
+   "ready": "timeout",
+   "attemptsMade": 1,
+   "failedReason": "job stalled more than allowable limit"
+  },
+  {
+   "id": "fd69abf8-ef89-48bc-b4ce-5bb27435b98e",
+   "queued_ms": 602849,
+   "ready": "timeout",
+   "attemptsMade": 1,
+   "failedReason": "job stalled more than allowable limit"
+  },
+  {
+   "id": "32f45e79-0693-4fdd-8b71-b312e00bfc36",
+   "queued_ms": 602849,
+   "ready": "timeout",
+   "attemptsMade": 1,
+   "failedReason": "job stalled more than allowable limit"
+  },
+  {
+   "id": "c320eee8-ef83-414c-b719-b57abe711810",
+   "queued_ms": 581968,
+   "ready": "timeout",
+   "attemptsMade": 1,
+   "failedReason": "job stalled more than allowable limit"
+  },
+  {
+   "id": "fba15fbd-ecbf-4b63-941b-11798a0efbd8",
+   "queued_ms": 555810,
+   "ready": "timeout",
+   "attemptsMade": 1,
+   "failedReason": "job stalled more than allowable limit"
+  },
+  {
+   "id": "e61eb8ee-1ded-4969-80a6-c68a129ceca7",
+   "queued_ms": 540366,
+   "ready": "timeout",
+   "attemptsMade": 1,
+   "failedReason": "job stalled more than allowable limit"
+  },
+  {
+   "id": "0e5def84-ea83-4762-871f-0ef5825d5646",
+   "queued_ms": 540364,
+   "ready": "timeout",
+   "attemptsMade": 1,
+   "failedReason": "job stalled more than allowable limit"
+  },
+  {
+   "id": "0cf32e08-a379-4793-b99a-a2da1788605c",
+   "queued_ms": 519298,
+   "ready": "timeout",
+   "attemptsMade": 1,
+   "failedReason": "job stalled more than allowable limit"
+  },
+  {
+   "id": "8a6c09bd-8375-4218-b96b-c3ed5c12a1e2",
+   "queued_ms": 492417,
+   "ready": "timeout",
+   "attemptsMade": 1,
+   "failedReason": "job stalled more than allowable limit"
+  },
+  {
+   "id": "5f7bc595-fc1c-47c1-81c0-ebf7ebe9e177",
+   "queued_ms": 476829,
+   "ready": "timeout",
+   "attemptsMade": 1,
+   "failedReason": "job stalled more than allowable limit"
+  },
+  {
+   "id": "4c1b52fd-f981-48be-9f35-e966ee260ee0",
+   "queued_ms": 476831,
+   "ready": "timeout",
+   "attemptsMade": 1,
+   "failedReason": "job stalled more than allowable limit"
+  },
+  {
+   "id": "9f787f20-7a65-4722-b9bb-cb318658fdd5",
+   "queued_ms": 456031,
+   "ready": "timeout",
+   "attemptsMade": 1,
+   "failedReason": "job stalled more than allowable limit"
+  },
+  {
+   "id": "789b64f2-a065-4bcc-ae9e-0e78d01fab8b",
+   "queued_ms": 429761,
+   "ready": "timeout",
+   "attemptsMade": 1,
+   "failedReason": "job stalled more than allowable limit"
+  },
+  {
+   "id": "f59d50ab-e35c-4efb-9919-c5eb3e0e871f",
+   "queued_ms": 414147,
+   "ready": "timeout",
+   "attemptsMade": 1,
+   "failedReason": "job stalled more than allowable limit"
+  },
+  {
+   "id": "d0380be6-9de1-48bb-a3b8-2b49b6bb9ae6",
+   "queued_ms": 414146,
+   "ready": "timeout",
+   "attemptsMade": 1,
+   "failedReason": "job stalled more than allowable limit"
+  },
+  {
+   "id": "681d9e24-834e-4027-b018-e1260d2a0f7b",
+   "queued_ms": 393185,
+   "ready": "timeout",
+   "attemptsMade": 1,
+   "failedReason": "job stalled more than allowable limit"
+  },
+  {
+   "id": "93ddf191-cad6-41bf-9cbb-e17a52a3bdde",
+   "queued_ms": 366806,
+   "ready": "timeout",
+   "attemptsMade": 1,
+   "failedReason": "job stalled more than allowable limit"
+  },
+  {
+   "id": "910c7a13-1623-4235-8e29-b5d6c5101b19",
+   "queued_ms": 351244,
+   "ready": "timeout",
+   "attemptsMade": 1,
+   "failedReason": "job stalled more than allowable limit"
+  },
+  {
+   "id": "bb35fb08-fb5b-476d-a280-7a731c06a60f",
+   "queued_ms": 351245,
+   "ready": "timeout",
+   "attemptsMade": 1,
+   "failedReason": "job stalled more than allowable limit"
+  },
+  {
+   "id": "fffb7b54-316e-469a-862a-9ca771bdd35d",
+   "queued_ms": 330126,
+   "ready": "timeout",
+   "attemptsMade": 1,
+   "failedReason": "job stalled more than allowable limit"
+  },
+  {
+   "id": "ae9d8bc9-6ff2-45a2-bc8e-c4eb21d48e60",
+   "queued_ms": 303736,
+   "ready": "timeout",
+   "attemptsMade": 1,
+   "failedReason": "job stalled more than allowable limit"
+  },
+  {
+   "id": "ffa5fe72-062f-44c4-bec2-544436a88c89",
+   "queued_ms": 288096,
+   "ready": "timeout",
+   "attemptsMade": 1,
+   "failedReason": "job stalled more than allowable limit"
+  },
+  {
+   "id": "00f5f85f-bfb9-49d6-89bf-0d3bd6825470",
+   "queued_ms": 288096,
+   "ready": "timeout",
+   "attemptsMade": 1,
+   "failedReason": "job stalled more than allowable limit"
+  },
+  {
+   "id": "6231b837-fabf-4cb0-bc1b-e17ea3c55e29",
+   "queued_ms": 266950,
+   "ready": "timeout",
+   "attemptsMade": 1,
+   "failedReason": "job stalled more than allowable limit"
+  },
+  {
+   "id": "7186a2e1-d172-4f64-9d31-c3485b248830",
+   "queued_ms": 240479,
+   "ready": "timeout",
+   "attemptsMade": 1,
+   "failedReason": "job stalled more than allowable limit"
+  },
+  {
+   "id": "91a30dd0-807b-4ee2-84b1-e3d39c773b43",
+   "queued_ms": 224918,
+   "ready": "timeout",
+   "attemptsMade": 1,
+   "failedReason": "job stalled more than allowable limit"
+  },
+  {
+   "id": "8a61f5a1-3fbb-4083-ac12-3228d60a17ac",
+   "queued_ms": 224917,
+   "ready": "timeout",
+   "attemptsMade": 1,
+   "failedReason": "job stalled more than allowable limit"
+  },
+  {
+   "id": "11306640-4f85-470d-8bb5-d6d13de49ebf",
+   "queued_ms": 204152,
+   "ready": "timeout",
+   "attemptsMade": 1,
+   "failedReason": "job stalled more than allowable limit"
+  },
+  {
+   "id": "055225d4-fcdb-4d8c-941b-5ac694d55a18",
+   "queued_ms": 177864,
+   "ready": "timeout",
+   "attemptsMade": 1,
+   "failedReason": "job stalled more than allowable limit"
+  },
+  {
+   "id": "baf06ac0-1e29-4366-9846-5e70e3d0770b",
+   "queued_ms": 162336,
+   "ready": "timeout",
+   "attemptsMade": 1,
+   "failedReason": "job stalled more than allowable limit"
+  },
+  {
+   "id": "806cc1ea-687f-4958-9117-939b0f41035c",
+   "queued_ms": 162335,
+   "ready": "timeout",
+   "attemptsMade": 1,
+   "failedReason": "job stalled more than allowable limit"
+  },
+  {
+   "id": "c8e846b8-1c64-406c-a3ac-c37e7730ae20",
+   "queued_ms": 141566,
+   "ready": "timeout",
+   "attemptsMade": 1,
+   "failedReason": "job stalled more than allowable limit"
+  },
+  {
+   "id": "10b494ee-a00e-4d21-b0c8-5ff1d9fc3050",
+   "queued_ms": 115073,
+   "ready": "timeout",
+   "attemptsMade": 1,
+   "failedReason": "job stalled more than allowable limit"
+  },
+  {
+   "id": "aa70c6c2-28d6-4157-af8c-ed81e86d05eb",
+   "queued_ms": 99667,
+   "ready": "timeout",
+   "attemptsMade": 1,
+   "failedReason": "job stalled more than allowable limit"
+  },
+  {
+   "id": "4df0a8fe-36e0-403b-8f14-d7ff94a310df",
+   "queued_ms": 99666,
+   "ready": "timeout",
+   "attemptsMade": 1,
+   "failedReason": "job stalled more than allowable limit"
+  },
+  {
+   "id": "92438f40-a451-4a9c-aeb5-ff86b3220f21",
+   "queued_ms": 99666,
+   "ready": "timeout",
+   "attemptsMade": 1,
+   "failedReason": "job stalled more than allowable limit"
+  },
+  {
+   "id": "8bbd7ca3-162a-4981-9837-3f7ea9230d89",
+   "queued_ms": 340319,
+   "ready": "timeout",
+   "attemptsMade": 1,
+   "failedReason": "job stalled more than allowable limit"
+  },
+  {
+   "id": "fb32ce33-54d2-4f97-afcb-1a45524a827d",
+   "queued_ms": 340430,
+   "ready": "timeout",
+   "attemptsMade": 1,
+   "failedReason": "job stalled more than allowable limit"
+  },
+  {
+   "id": "1d571d8e-8bef-4482-83d9-2bba8d417dcc",
+   "queued_ms": 325226,
+   "ready": "timeout",
+   "attemptsMade": 1,
+   "failedReason": "job stalled more than allowable limit"
+  },
+  {
+   "id": "b33445ed-fd82-4f27-8151-e89d1f17c20d",
+   "queued_ms": 300186,
+   "ready": "timeout",
+   "attemptsMade": 1,
+   "failedReason": "job stalled more than allowable limit"
+  },
+  {
+   "id": "9cd2184f-230a-4991-b9f6-faabd1176800",
+   "queued_ms": 284575,
+   "ready": "timeout",
+   "attemptsMade": 1,
+   "failedReason": "job stalled more than allowable limit"
+  },
+  {
+   "id": "03d77110-7d94-4501-9388-aac77d46f3ce",
+   "queued_ms": 284577,
+   "ready": "timeout",
+   "attemptsMade": 1,
+   "failedReason": "job stalled more than allowable limit"
+  },
+  {
+   "id": "5e39fdae-a023-427a-a7fb-2f5c8bd2fd1e",
+   "queued_ms": 263851,
+   "ready": "timeout",
+   "attemptsMade": 1,
+   "failedReason": "job stalled more than allowable limit"
+  },
+  {
+   "id": "a3c039d4-f807-4b29-95ab-a3cf0d8fcf70",
+   "queued_ms": 237135,
+   "ready": "timeout",
+   "attemptsMade": 1,
+   "failedReason": "job stalled more than allowable limit"
+  },
+  {
+   "id": "66234ea8-42a5-4539-8497-5364954fcc29",
+   "queued_ms": 221743,
+   "ready": "timeout",
+   "attemptsMade": 1,
+   "failedReason": "job stalled more than allowable limit"
+  },
+  {
+   "id": "9e19a107-4c8a-46d7-8081-23029f70fecd",
+   "queued_ms": 221744,
+   "ready": "timeout",
+   "attemptsMade": 1,
+   "failedReason": "job stalled more than allowable limit"
+  },
+  {
+   "id": "2d83b6d0-7f3c-4c32-8b26-a571a454c878",
+   "queued_ms": 200640,
+   "ready": "timeout",
+   "attemptsMade": 1,
+   "failedReason": "job stalled more than allowable limit"
+  },
+  {
+   "id": "fbc621de-35aa-4793-90e9-b66692a9919f",
+   "queued_ms": 173538,
+   "ready": "timeout",
+   "attemptsMade": 1,
+   "failedReason": "job stalled more than allowable limit"
+  },
+  {
+   "id": "68bd450e-c675-4eed-b584-34512bbf6878",
+   "queued_ms": 158112,
+   "ready": "timeout",
+   "attemptsMade": 1,
+   "failedReason": "job stalled more than allowable limit"
+  },
+  {
+   "id": "6f45adce-6a54-41e7-b6ba-bd3a86f47956",
+   "queued_ms": 158119,
+   "ready": "timeout",
+   "attemptsMade": 1,
+   "failedReason": "job stalled more than allowable limit"
+  },
+  {
+   "id": "3ae7b290-d009-4205-9e2e-1430cd5c90f2",
+   "queued_ms": 137334,
+   "ready": "timeout",
+   "attemptsMade": 1,
+   "failedReason": "job stalled more than allowable limit"
+  },
+  {
+   "id": "e375a5bb-d4df-48e2-b057-e3ed554c826e",
+   "queued_ms": 111207,
+   "ready": "timeout",
+   "attemptsMade": 1,
+   "failedReason": "job stalled more than allowable limit"
+  },
+  {
+   "id": "8d7a9f6c-8ec4-47aa-a1c1-a71a5b38233c",
+   "queued_ms": 95911,
+   "ready": "timeout",
+   "attemptsMade": 1,
+   "failedReason": "job stalled more than allowable limit"
+  },
+  {
+   "id": "255b5271-0479-4e4e-b9e0-f14b7632c030",
+   "queued_ms": 95934,
+   "ready": "timeout",
+   "attemptsMade": 1,
+   "failedReason": "job stalled more than allowable limit"
+  },
+  {
+   "id": "ea3db2c3-228d-4575-bd2c-88878960cca0",
+   "queued_ms": 95931,
+   "ready": "timeout",
+   "attemptsMade": 1,
+   "failedReason": "job stalled more than allowable limit"
+  },
+  {
+   "id": "b50f87ea-5f06-48fe-acc1-d579c00b7817",
+   "queued_ms": 80942,
+   "ready": null,
+   "attemptsMade": 1,
+   "failedReason": "job stalled more than allowable limit"
+  },
+  {
+   "id": "f9d1769f-9acc-4d1d-b40f-1e07271c7ed0",
+   "queued_ms": 169900,
+   "ready": null,
+   "attemptsMade": 1,
+   "failedReason": "job stalled more than allowable limit"
+  },
+  {
+   "id": "2bb1a6e8-2ab9-4c08-839d-3984f5d48c8c",
+   "queued_ms": 138177,
+   "ready": null,
+   "attemptsMade": 1,
+   "failedReason": "job stalled more than allowable limit"
+  }
+ ]
+}

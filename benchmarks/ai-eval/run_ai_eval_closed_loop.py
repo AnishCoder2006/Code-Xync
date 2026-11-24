@@ -5,6 +5,8 @@ and hardened Docker sandbox runner.
 Supports:
   --baseline : verify all cases fail on original buggy code with assertion failures (not syntax/import errors)
   --gold     : verify all cases pass (exit 0) with gold reference solutions through the real sandbox
+  --results-json PATH : also write a machine-readable results file (Phase 6 B5), read by
+                        benchmarks/report.py. Unknown values are null, never guessed.
 """
 
 import os
@@ -234,7 +236,60 @@ def run_gold(cases_count: int = 25):
     return results
 
 
-def run_eval(cases_count: int = 25, provider_name: str = "ollama", model_name: str = "qwen2.5-coder:0.5b"):
+def _environment() -> Dict[str, Any]:
+    import platform
+    import subprocess
+
+    def sh(cmd):
+        try:
+            return subprocess.run(cmd, capture_output=True, text=True, timeout=20).stdout.strip() or None
+        except Exception:
+            return None
+
+    head = sh(["git", "rev-parse", "--verify", "-q", "HEAD"])
+    return {
+        "git": {
+            "commit": head,
+            "commit_note": None if head else "branch has no commits; results come from the uncommitted working tree",
+            "last_pushed_commit": sh(["git", "rev-parse", "--verify", "-q", "origin/main"]),
+        },
+        "environment": {
+            "os": f"{platform.system()} {platform.release()} ({platform.machine()})",
+            "cpu": platform.processor() or None,
+            "logical_cpus": os.cpu_count(),
+            "python": platform.python_version(),
+            "docker": sh(["docker", "version", "--format", "client {{.Client.Version}} / server {{.Server.Version}}"]),
+        },
+    }
+
+
+def write_results_json(path: str, provider_name: str, model_name: str, results: List[Dict[str, Any]], summary: Dict[str, Any]):
+    """Phase 6 B5 results file. Every per-case number comes from the run; unknown -> null."""
+    env = _environment()
+    models_seen = sorted({m for r in results for m in (r.get("models_reported") or []) if m})
+    doc = {
+        "schema": "codesync-ai-eval/v1",
+        "name": "b5-ai-eval",
+        "timestamp": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
+        **env,
+        "provider": provider_name,
+        "model_requested": model_name,
+        "models_reported_by_provider": models_seen or None,
+        "cases": results,
+        "summary": summary,
+        "notes": [
+            "time_s is end-to-end fix time per case: LLM provider latency + edit apply + sandbox test runs (+ retries).",
+            "attempts = LLM calls made for the case (1 + regenerations after failed sandbox tests).",
+            "Token counts are null when the provider did not report them; cost_usd is the provider-reported/estimated cost.",
+        ],
+    }
+    os.makedirs(os.path.dirname(os.path.abspath(path)), exist_ok=True)
+    with open(path, "w", encoding="utf-8") as f:
+        json.dump(doc, f, indent=1)
+    print(f"Wrote results JSON: {path}")
+
+
+def run_eval(cases_count: int = 25, provider_name: str = "ollama", model_name: str = "qwen2.5-coder:0.5b", results_json: str = None):
     os.environ["LLM_PROVIDER"] = provider_name
     if provider_name == "ollama":
         os.environ["OLLAMA_MODEL"] = model_name
@@ -334,18 +389,22 @@ def run_eval(cases_count: int = 25, provider_name: str = "ollama", model_name: s
 
         token_str = f"{case_tokens:>5} (p:{prompt_tokens}/c:{comp_tokens})" if case_tokens is not None else " null"
 
+        latencies = [r.get("latency_ms") for r in llm_responses if r.get("latency_ms") is not None]
         results.append({
             "idx": idx,
             "id": info["id"],
             "title": info["title"],
             "status": status,
             "calls": calls,
+            "attempts": calls,
             "retries": retries,
             "prompt_tokens": prompt_tokens,
             "completion_tokens": comp_tokens,
             "tokens": case_tokens,
             "cost_usd": cost,
             "time_s": round(elapsed_s, 2),
+            "provider_latency_ms_total": round(sum(latencies), 1) if latencies else None,
+            "models_reported": sorted({r.get("model") for r in llm_responses if r.get("model")}) or None,
         })
 
         print(f"[{idx:02d}/{len(selected_cases)}] {info['id']:<28} | Status: {status:<10} | Calls: {calls} | Tokens: {token_str} | Cost: ${cost:.6f} | Time: {elapsed_s:.2f}s")
@@ -368,6 +427,16 @@ def run_eval(cases_count: int = 25, provider_name: str = "ollama", model_name: s
     print(f"Total Estimated Cost:    ${total_cost:.6f}")
     print("=========================================================================================\n")
 
+    if results_json:
+        write_results_json(results_json, provider_name, model_name, results, {
+            "cases_evaluated": total_evaluated,
+            "verified_first_attempt": first_attempt_passes,
+            "verified_after_retry": after_retry_passes,
+            "verified_total": cumulative_passes,
+            "total_tokens": total_tokens if has_provider_tokens else None,
+            "total_cost_usd": round(total_cost, 6),
+        })
+
     return results
 
 
@@ -378,6 +447,7 @@ if __name__ == "__main__":
     parser.add_argument("--model", type=str, default="qwen2.5-coder:0.5b", help="Model name")
     parser.add_argument("--baseline", action="store_true", help="Run baseline test of original source through sandbox")
     parser.add_argument("--gold", action="store_true", help="Run gold reference solutions through sandbox")
+    parser.add_argument("--results-json", type=str, default=None, help="Write machine-readable results to this path (e.g. benchmarks/results/b5-ai-eval.json)")
     args = parser.parse_args()
 
     if args.baseline:
@@ -385,4 +455,4 @@ if __name__ == "__main__":
     elif args.gold:
         run_gold(cases_count=args.count)
     else:
-        run_eval(cases_count=args.count, provider_name=args.provider, model_name=args.model)
+        run_eval(cases_count=args.count, provider_name=args.provider, model_name=args.model, results_json=args.results_json)

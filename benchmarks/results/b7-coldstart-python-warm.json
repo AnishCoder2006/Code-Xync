@@ -1,0 +1,272 @@
+{
+ "name": "b7-coldstart-python-warm",
+ "title": "Sandbox startup with warm pool (python): container claimed -> first output",
+ "timestamp": "2026-11-24T11:18:38.322Z",
+ "git": {
+  "commit": null,
+  "commit_note": "branch main has no commits yet; numbers come from the uncommitted working tree",
+  "last_pushed_commit": "652296a6ff2656d1765588be5606f409a44ce3c9",
+  "uncommitted_paths": 258,
+  "source_digest": "a76af80efb1898c5",
+  "source_digest_dirs": [
+   "services/worker/src",
+   "benchmarks/queue",
+   "benchmarks/lib",
+   "infra/docker/sandbox-images"
+  ]
+ },
+ "environment": {
+  "os": "Windows_NT 10.0.26200 (win32 x64)",
+  "cpu": "Intel(R) Core(TM) Ultra 5 125H",
+  "logical_cpus": 18,
+  "ram_gib": 15.4,
+  "node": "v22.15.1",
+  "docker": "client 28.1.1 / server 28.1.1 (linux/amd64)",
+  "docker_desktop_note": "Docker Desktop on Windows: containers run in the WSL2 VM; Redis/Postgres/Qdrant and sandboxes cross the Windows<->VM boundary",
+  "load_generator_shares_machine": true,
+  "memory_at_start": {
+   "available_mib": 1361,
+   "committed_gib": 26.7,
+   "commit_limit_gib": 28.6,
+   "pages_per_sec": 0
+  }
+ },
+ "conditions": {
+  "language": "python",
+  "image": "codesync-sandbox-python",
+  "program": "print(\"b2\")",
+  "worker_concurrency": 1,
+  "jobs": "sequential, one at a time, queue empty",
+  "docker": "Docker Desktop on Windows (WSL2 VM); a fresh --rm container per job (never reused)",
+  "samples_ms_is": "firstOutputAt - dockerSpawnAt, where dockerSpawnAt = warm container claimed (program then piped over stdin); container boot happened before the job",
+  "warm_pool_size_per_language": 2
+ },
+ "protocol": "1 warm-up run (3 jobs) + 3 measured runs (10 jobs each)",
+ "runs": [
+  {
+   "run": 0,
+   "warmup": true,
+   "samples_ms": [
+    24,
+    10,
+    6
+   ],
+   "stats": {
+    "n": 3,
+    "min": 6,
+    "p50": 10,
+    "p95": 24,
+    "p99": 24,
+    "max": 24,
+    "mean": 13.33
+   },
+   "extra": {
+    "docker_run_spawn_to_exit_ms": {
+     "samples": [
+      316,
+      250,
+      277
+     ],
+     "stats": {
+      "n": 3,
+      "min": 250,
+      "p50": 277,
+      "p95": 316,
+      "p99": 316,
+      "max": 316,
+      "mean": 281
+     }
+    },
+    "sandbox_path_counts": {
+     "warm": 3
+    }
+   }
+  },
+  {
+   "run": 1,
+   "warmup": false,
+   "samples_ms": [
+    7,
+    7,
+    9,
+    7,
+    7,
+    7,
+    7,
+    9,
+    9,
+    7
+   ],
+   "stats": {
+    "n": 10,
+    "min": 7,
+    "p50": 7,
+    "p95": 9,
+    "p99": 9,
+    "max": 9,
+    "mean": 7.6
+   },
+   "extra": {
+    "docker_run_spawn_to_exit_ms": {
+     "samples": [
+      261,
+      270,
+      280,
+      321,
+      239,
+      245,
+      275,
+      292,
+      304,
+      289
+     ],
+     "stats": {
+      "n": 10,
+      "min": 239,
+      "p50": 275,
+      "p95": 321,
+      "p99": 321,
+      "max": 321,
+      "mean": 277.6
+     }
+    },
+    "sandbox_path_counts": {
+     "warm": 10
+    }
+   }
+  },
+  {
+   "run": 2,
+   "warmup": false,
+   "samples_ms": [
+    10,
+    8,
+    8,
+    6,
+    7,
+    8,
+    8,
+    7,
+    9,
+    8
+   ],
+   "stats": {
+    "n": 10,
+    "min": 6,
+    "p50": 8,
+    "p95": 10,
+    "p99": 10,
+    "max": 10,
+    "mean": 7.9
+   },
+   "extra": {
+    "docker_run_spawn_to_exit_ms": {
+     "samples": [
+      353,
+      295,
+      353,
+      319,
+      316,
+      268,
+      302,
+      306,
+      315,
+      312
+     ],
+     "stats": {
+      "n": 10,
+      "min": 268,
+      "p50": 312,
+      "p95": 353,
+      "p99": 353,
+      "max": 353,
+      "mean": 313.9
+     }
+    },
+    "sandbox_path_counts": {
+     "warm": 10
+    }
+   }
+  },
+  {
+   "run": 3,
+   "warmup": false,
+   "samples_ms": [
+    7,
+    15,
+    8,
+    9,
+    8,
+    7,
+    7,
+    8,
+    8,
+    7
+   ],
+   "stats": {
+    "n": 10,
+    "min": 7,
+    "p50": 8,
+    "p95": 15,
+    "p99": 15,
+    "max": 15,
+    "mean": 8.4
+   },
+   "extra": {
+    "docker_run_spawn_to_exit_ms": {
+     "samples": [
+      311,
+      428,
+      347,
+      339,
+      293,
+      291,
+      296,
+      328,
+      344,
+      291
+     ],
+     "stats": {
+      "n": 10,
+      "min": 291,
+      "p50": 311,
+      "p95": 428,
+      "p99": 428,
+      "max": 428,
+      "mean": 326.8
+     }
+    },
+    "sandbox_path_counts": {
+     "warm": 10
+    }
+   }
+  }
+ ],
+ "summary": {
+  "median_run": 2,
+  "median_stats": {
+   "n": 10,
+   "min": 6,
+   "p50": 8,
+   "p95": 10,
+   "p99": 10,
+   "max": 10,
+   "mean": 7.9
+  },
+  "spread": {
+   "p50": {
+    "min": 7,
+    "max": 8
+   },
+   "p95": {
+    "min": 9,
+    "max": 15
+   },
+   "p99": {
+    "min": 9,
+    "max": 15
+   }
+  }
+ },
+ "notes": []
+}

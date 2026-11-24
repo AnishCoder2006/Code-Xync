@@ -1,8 +1,15 @@
 import { useEffect, useRef, useCallback } from "react";
-import { Editor as MonacoEditor, DiffEditor } from "@monaco-editor/react";
+import { Editor as MonacoEditor, DiffEditor, loader } from "@monaco-editor/react";
 import * as Y from "yjs";
 import { WebsocketProvider } from "y-websocket";
 import { MonacoBinding } from "y-monaco";
+
+// Load Monaco's AMD build from this app (public/monaco/vs, copied by
+// scripts/copy-monaco.js) rather than a CDN. y-monaco shares this instance through
+// src/lib/monaco-global.js.
+if (typeof window !== "undefined") {
+  loader.config({ paths: { vs: "/monaco/vs" } });
+}
 
 interface EditorProps {
   roomId: string;
@@ -11,9 +18,15 @@ interface EditorProps {
   // When both are non-null the component renders a side-by-side diff
   diffOriginal?: string | null;
   diffModified?: string | null;
+  /** Override the sync server URL (defaults to NEXT_PUBLIC_SYNC_URL). Used by /e2e/editor. */
+  syncUrl?: string;
+  /** Override the auth token (defaults to the Clerk __session cookie). Used by /e2e/editor. */
+  token?: string;
+  /** Called with the WebsocketProvider once it exists (status/sync events, tests). */
+  onProvider?: (provider: WebsocketProvider) => void;
 }
 
-export function Editor({ roomId, language, onReady, diffOriginal, diffModified }: EditorProps) {
+export function Editor({ roomId, language, onReady, diffOriginal, diffModified, syncUrl: syncUrlProp, token: tokenProp, onProvider }: EditorProps) {
   const ydocRef = useRef<Y.Doc | null>(null);
   const providerRef = useRef<WebsocketProvider | null>(null);
   const bindingRef = useRef<MonacoBinding | null>(null);
@@ -24,17 +37,19 @@ export function Editor({ roomId, language, onReady, diffOriginal, diffModified }
     const ydoc = new Y.Doc();
     ydocRef.current = ydoc;
 
-    const syncUrl = process.env.NEXT_PUBLIC_SYNC_URL || "ws://localhost:4001";
+    const syncUrl = syncUrlProp || process.env.NEXT_PUBLIC_SYNC_URL || "ws://localhost:4001";
     // Read the Clerk session token from the cookie for the WS handshake auth
     const token =
-      typeof window !== "undefined"
+      tokenProp ??
+      (typeof window !== "undefined"
         ? (document.cookie.match(/(?:^|; )__session=([^;]*)/) ?? [])[1] ?? ""
-        : "";
+        : "");
 
     const provider = new WebsocketProvider(syncUrl, roomId, ydoc, {
       params: { token, roomId },
     });
     providerRef.current = provider;
+    onProvider?.(provider);
 
     const getCode = () => {
       if (editorRef.current) return editorRef.current.getValue();
@@ -48,7 +63,7 @@ export function Editor({ roomId, language, onReady, diffOriginal, diffModified }
       provider.destroy();
       ydoc.destroy();
     };
-  }, [roomId, onReady]);
+  }, [roomId, onReady, syncUrlProp, tokenProp, onProvider]);
 
   // Bind Monaco to Yjs ONLY after the provider fires "synced"
   // Prevents the "cursor jumps to top / first edit is lost" bug

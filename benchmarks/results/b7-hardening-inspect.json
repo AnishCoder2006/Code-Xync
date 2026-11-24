@@ -1,0 +1,127 @@
+{
+ "name": "b7-hardening-inspect",
+ "timestamp": "2026-11-24T11:17:06.694Z",
+ "conditions": {
+  "fresh": "runInDocker snapshot job (python sleep 3 s), inspected while running",
+  "warm": "WarmPool python container, inspected while READY"
+ },
+ "rows": [
+  {
+   "field": "NetworkMode",
+   "fresh": "\"none\"",
+   "warm": "\"none\"",
+   "limits_ts": "\"none\"",
+   "same": true,
+   "matches_limits": true
+  },
+  {
+   "field": "ReadonlyRootfs",
+   "fresh": "true",
+   "warm": "true",
+   "limits_ts": "true",
+   "same": true,
+   "matches_limits": true
+  },
+  {
+   "field": "Tmpfs",
+   "fresh": "{\"/tmp\":\"rw,size=16m,noexec,nosuid\"}",
+   "warm": "{\"/tmp\":\"rw,size=16m,noexec,nosuid\"}",
+   "limits_ts": "{\"/tmp\":\"rw,size=16m,noexec,nosuid\"}",
+   "same": true,
+   "matches_limits": true
+  },
+  {
+   "field": "CapDrop",
+   "fresh": "[\"ALL\"]",
+   "warm": "[\"ALL\"]",
+   "limits_ts": "[\"ALL\"]",
+   "same": true,
+   "matches_limits": true
+  },
+  {
+   "field": "CapAdd",
+   "fresh": "null",
+   "warm": "null",
+   "limits_ts": "(not set by limits.ts)",
+   "same": true,
+   "matches_limits": true
+  },
+  {
+   "field": "SecurityOpt",
+   "fresh": "[\"no-new-privileges\"]",
+   "warm": "[\"no-new-privileges\"]",
+   "limits_ts": "[\"no-new-privileges\"]",
+   "same": true,
+   "matches_limits": true
+  },
+  {
+   "field": "Memory",
+   "fresh": "268435456",
+   "warm": "268435456",
+   "limits_ts": "268435456",
+   "same": true,
+   "matches_limits": true
+  },
+  {
+   "field": "MemorySwap",
+   "fresh": "268435456",
+   "warm": "268435456",
+   "limits_ts": "268435456",
+   "same": true,
+   "matches_limits": true
+  },
+  {
+   "field": "NanoCpus",
+   "fresh": "500000000",
+   "warm": "500000000",
+   "limits_ts": "500000000",
+   "same": true,
+   "matches_limits": true
+  },
+  {
+   "field": "PidsLimit",
+   "fresh": "64",
+   "warm": "64",
+   "limits_ts": "64",
+   "same": true,
+   "matches_limits": true
+  },
+  {
+   "field": "Privileged",
+   "fresh": "false",
+   "warm": "false",
+   "limits_ts": "false",
+   "same": true,
+   "matches_limits": true
+  },
+  {
+   "field": "User",
+   "fresh": "\"10001:10001\"",
+   "warm": "\"10001:10001\"",
+   "limits_ts": "\"10001:10001\"",
+   "same": true,
+   "matches_limits": true
+  },
+  {
+   "field": "AutoRemove",
+   "fresh": "true",
+   "warm": "true",
+   "limits_ts": "true",
+   "same": true,
+   "matches_limits": true
+  }
+ ],
+ "other_differences": {
+  "fresh_binds": [
+   "C:\\Users\\ashwi\\AppData\\Local\\Temp\\job-b7-inspect-1795519021604-qoEBq8:/app:ro"
+  ],
+  "warm_binds": null,
+  "fresh_open_stdin": false,
+  "warm_open_stdin": true
+ },
+ "summary": {
+  "verdict": "identical hardening",
+  "fields_compared": 13,
+  "differences": []
+ }
+}

@@ -1,0 +1,312 @@
+{
+ "name": "b2-queue-c4-n1",
+ "title": "Enqueue to container start: 1 concurrent submissions, WORKER_CONCURRENCY=4",
+ "timestamp": "2026-11-24T11:02:55.024Z",
+ "git": {
+  "commit": null,
+  "commit_note": "branch main has no commits yet; numbers come from the uncommitted working tree",
+  "last_pushed_commit": "652296a6ff2656d1765588be5606f409a44ce3c9",
+  "uncommitted_paths": 258,
+  "source_digest": "844b768956132241",
+  "source_digest_dirs": [
+   "services/api/src",
+   "services/worker/src",
+   "benchmarks/queue",
+   "benchmarks/lib"
+  ]
+ },
+ "environment": {
+  "os": "Windows_NT 10.0.26200 (win32 x64)",
+  "cpu": "Intel(R) Core(TM) Ultra 5 125H",
+  "logical_cpus": 18,
+  "ram_gib": 15.4,
+  "node": "v22.15.1",
+  "docker": "client 28.1.1 / server 28.1.1 (linux/amd64)",
+  "docker_desktop_note": "Docker Desktop on Windows: containers run in the WSL2 VM; Redis/Postgres/Qdrant and sandboxes cross the Windows<->VM boundary",
+  "load_generator_shares_machine": true,
+  "memory_at_start": {
+   "available_mib": 712,
+   "committed_gib": 26.2,
+   "commit_limit_gib": 28.6,
+   "pages_per_sec": 0
+  }
+ },
+ "conditions": {
+  "worker_concurrency": 4,
+  "concurrent_submissions": 1,
+  "submission": "Promise.all of POST /execution, each from a different test user, then POST /execution/:jobId/ready",
+  "program": "javascript: console.log(\"b2\") in codesync-sandbox-node",
+  "max_queue_length": 50,
+  "rate_limit": "EXECUTION_RATE_PER_MIN default (10/min per user); users rotate over 300 test users",
+  "sandbox_flags": "unchanged: --network none --read-only --cap-drop ALL --pids-limit 64 --memory 256m --cpus 0.5 ...",
+  "docker": "Docker Desktop on Windows (WSL2 VM): every docker run goes CLI -> named pipe -> VM",
+  "bullmq_workers_on_queue": 1,
+  "samples_ms_is": "enqueue_to_container_start_ms = docker run spawned - BullMQ job.timestamp, accepted jobs only"
+ },
+ "protocol": "1 warm-up batch + 3 measured batches; queue drained before each batch",
+ "runs": [
+  {
+   "run": 0,
+   "warmup": true,
+   "samples_ms": [
+    412
+   ],
+   "stats": {
+    "n": 1,
+    "min": 412,
+    "p50": 412,
+    "p95": 412,
+    "p99": 412,
+    "max": 412,
+    "mean": 412
+   },
+   "extra": {
+    "submitted": 1,
+    "http_status_counts": {
+     "200": 1
+    },
+    "http_429": 0,
+    "http_503": 0,
+    "jobs_with_timing": 1,
+    "jobs_without_container_start": 0,
+    "jobs_never_finished": 0,
+    "ready_signal_timeouts": 0,
+    "bullmq_job_states": {
+     "active": 1
+    },
+    "queue_wait_ms": {
+     "samples": [
+      2
+     ],
+     "stats": {
+      "n": 1,
+      "min": 2,
+      "p50": 2,
+      "p95": 2,
+      "p99": 2,
+      "max": 2,
+      "mean": 2
+     }
+    },
+    "enqueue_to_first_output_ms": {
+     "samples": [
+      1056
+     ],
+     "stats": {
+      "n": 1,
+      "min": 1056,
+      "p50": 1056,
+      "p95": 1056,
+      "p99": 1056,
+      "max": 1056,
+      "mean": 1056
+     }
+    }
+   }
+  },
+  {
+   "run": 1,
+   "warmup": false,
+   "samples_ms": [
+    124
+   ],
+   "stats": {
+    "n": 1,
+    "min": 124,
+    "p50": 124,
+    "p95": 124,
+    "p99": 124,
+    "max": 124,
+    "mean": 124
+   },
+   "extra": {
+    "submitted": 1,
+    "http_status_counts": {
+     "200": 1
+    },
+    "http_429": 0,
+    "http_503": 0,
+    "jobs_with_timing": 1,
+    "jobs_without_container_start": 0,
+    "jobs_never_finished": 0,
+    "ready_signal_timeouts": 0,
+    "bullmq_job_states": {
+     "active": 1
+    },
+    "queue_wait_ms": {
+     "samples": [
+      3
+     ],
+     "stats": {
+      "n": 1,
+      "min": 3,
+      "p50": 3,
+      "p95": 3,
+      "p99": 3,
+      "max": 3,
+      "mean": 3
+     }
+    },
+    "enqueue_to_first_output_ms": {
+     "samples": [
+      860
+     ],
+     "stats": {
+      "n": 1,
+      "min": 860,
+      "p50": 860,
+      "p95": 860,
+      "p99": 860,
+      "max": 860,
+      "mean": 860
+     }
+    }
+   }
+  },
+  {
+   "run": 2,
+   "warmup": false,
+   "samples_ms": [
+    88
+   ],
+   "stats": {
+    "n": 1,
+    "min": 88,
+    "p50": 88,
+    "p95": 88,
+    "p99": 88,
+    "max": 88,
+    "mean": 88
+   },
+   "extra": {
+    "submitted": 1,
+    "http_status_counts": {
+     "200": 1
+    },
+    "http_429": 0,
+    "http_503": 0,
+    "jobs_with_timing": 1,
+    "jobs_without_container_start": 0,
+    "jobs_never_finished": 0,
+    "ready_signal_timeouts": 0,
+    "bullmq_job_states": {
+     "active": 1
+    },
+    "queue_wait_ms": {
+     "samples": [
+      4
+     ],
+     "stats": {
+      "n": 1,
+      "min": 4,
+      "p50": 4,
+      "p95": 4,
+      "p99": 4,
+      "max": 4,
+      "mean": 4
+     }
+    },
+    "enqueue_to_first_output_ms": {
+     "samples": [
+      627
+     ],
+     "stats": {
+      "n": 1,
+      "min": 627,
+      "p50": 627,
+      "p95": 627,
+      "p99": 627,
+      "max": 627,
+      "mean": 627
+     }
+    }
+   }
+  },
+  {
+   "run": 3,
+   "warmup": false,
+   "samples_ms": [
+    179
+   ],
+   "stats": {
+    "n": 1,
+    "min": 179,
+    "p50": 179,
+    "p95": 179,
+    "p99": 179,
+    "max": 179,
+    "mean": 179
+   },
+   "extra": {
+    "submitted": 1,
+    "http_status_counts": {
+     "200": 1
+    },
+    "http_429": 0,
+    "http_503": 0,
+    "jobs_with_timing": 1,
+    "jobs_without_container_start": 0,
+    "jobs_never_finished": 0,
+    "ready_signal_timeouts": 0,
+    "bullmq_job_states": {
+     "active": 1
+    },
+    "queue_wait_ms": {
+     "samples": [
+      2
+     ],
+     "stats": {
+      "n": 1,
+      "min": 2,
+      "p50": 2,
+      "p95": 2,
+      "p99": 2,
+      "max": 2,
+      "mean": 2
+     }
+    },
+    "enqueue_to_first_output_ms": {
+     "samples": [
+      963
+     ],
+     "stats": {
+      "n": 1,
+      "min": 963,
+      "p50": 963,
+      "p95": 963,
+      "p99": 963,
+      "max": 963,
+      "mean": 963
+     }
+    }
+   }
+  }
+ ],
+ "summary": {
+  "median_run": 1,
+  "median_stats": {
+   "n": 1,
+   "min": 124,
+   "p50": 124,
+   "p95": 124,
+   "p99": 124,
+   "max": 124,
+   "mean": 124
+  },
+  "spread": {
+   "p50": {
+    "min": 88,
+    "max": 179
+   },
+   "p95": {
+    "min": 88,
+    "max": 179
+   },
+   "p99": {
+    "min": 88,
+    "max": 179
+   }
+  }
+ },
+ "notes": []
+}

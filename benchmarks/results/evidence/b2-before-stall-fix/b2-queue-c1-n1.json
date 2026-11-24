@@ -1,0 +1,300 @@
+{
+ "name": "b2-queue-c1-n1",
+ "title": "Enqueue to container start: 1 concurrent submissions, WORKER_CONCURRENCY=1",
+ "timestamp": "2026-11-24T09:36:02.325Z",
+ "git": {
+  "commit": null,
+  "commit_note": "branch main has no commits yet; numbers come from the uncommitted working tree",
+  "last_pushed_commit": "652296a6ff2656d1765588be5606f409a44ce3c9",
+  "uncommitted_paths": 254,
+  "source_digest": "67563c4695601f7d",
+  "source_digest_dirs": [
+   "services/api/src",
+   "services/worker/src",
+   "benchmarks/queue",
+   "benchmarks/lib"
+  ]
+ },
+ "environment": {
+  "os": "Windows_NT 10.0.26200 (win32 x64)",
+  "cpu": "Intel(R) Core(TM) Ultra 5 125H",
+  "logical_cpus": 18,
+  "ram_gib": 15.4,
+  "node": "v22.15.1",
+  "docker": "client 28.1.1 / server 28.1.1 (linux/amd64)",
+  "docker_desktop_note": "Docker Desktop on Windows: containers run in the WSL2 VM; Redis/Postgres/Qdrant and sandboxes cross the Windows<->VM boundary",
+  "load_generator_shares_machine": true,
+  "memory_at_start": {
+   "available_mib": 1661,
+   "committed_gib": 25.2,
+   "commit_limit_gib": 27.6,
+   "pages_per_sec": 3945
+  }
+ },
+ "conditions": {
+  "worker_concurrency": 1,
+  "concurrent_submissions": 1,
+  "submission": "Promise.all of POST /execution, each from a different test user, then POST /execution/:jobId/ready",
+  "program": "javascript: console.log(\"b2\") in codesync-sandbox-node",
+  "max_queue_length": 50,
+  "rate_limit": "EXECUTION_RATE_PER_MIN default (10/min per user); users rotate over 300 test users",
+  "sandbox_flags": "unchanged: --network none --read-only --cap-drop ALL --pids-limit 64 --memory 256m --cpus 0.5 ...",
+  "docker": "Docker Desktop on Windows (WSL2 VM): every docker run goes CLI -> named pipe -> VM",
+  "bullmq_workers_on_queue": 1,
+  "samples_ms_is": "enqueue_to_container_start_ms = docker run spawned - BullMQ job.timestamp, accepted jobs only"
+ },
+ "protocol": "1 warm-up batch + 3 measured batches; queue drained before each batch",
+ "runs": [
+  {
+   "run": 0,
+   "warmup": true,
+   "samples_ms": [
+    314
+   ],
+   "stats": {
+    "n": 1,
+    "min": 314,
+    "p50": 314,
+    "p95": 314,
+    "p99": 314,
+    "max": 314,
+    "mean": 314
+   },
+   "extra": {
+    "submitted": 1,
+    "http_status_counts": {
+     "200": 1
+    },
+    "http_429": 0,
+    "http_503": 0,
+    "jobs_with_timing": 1,
+    "jobs_without_container_start": 0,
+    "jobs_never_finished": 0,
+    "ready_signal_timeouts": 0,
+    "queue_wait_ms": {
+     "samples": [
+      1
+     ],
+     "stats": {
+      "n": 1,
+      "min": 1,
+      "p50": 1,
+      "p95": 1,
+      "p99": 1,
+      "max": 1,
+      "mean": 1
+     }
+    },
+    "enqueue_to_first_output_ms": {
+     "samples": [
+      868
+     ],
+     "stats": {
+      "n": 1,
+      "min": 868,
+      "p50": 868,
+      "p95": 868,
+      "p99": 868,
+      "max": 868,
+      "mean": 868
+     }
+    }
+   }
+  },
+  {
+   "run": 1,
+   "warmup": false,
+   "samples_ms": [
+    163
+   ],
+   "stats": {
+    "n": 1,
+    "min": 163,
+    "p50": 163,
+    "p95": 163,
+    "p99": 163,
+    "max": 163,
+    "mean": 163
+   },
+   "extra": {
+    "submitted": 1,
+    "http_status_counts": {
+     "200": 1
+    },
+    "http_429": 0,
+    "http_503": 0,
+    "jobs_with_timing": 1,
+    "jobs_without_container_start": 0,
+    "jobs_never_finished": 0,
+    "ready_signal_timeouts": 0,
+    "queue_wait_ms": {
+     "samples": [
+      -7
+     ],
+     "stats": {
+      "n": 1,
+      "min": -7,
+      "p50": -7,
+      "p95": -7,
+      "p99": -7,
+      "max": -7,
+      "mean": -7
+     }
+    },
+    "enqueue_to_first_output_ms": {
+     "samples": [
+      541
+     ],
+     "stats": {
+      "n": 1,
+      "min": 541,
+      "p50": 541,
+      "p95": 541,
+      "p99": 541,
+      "max": 541,
+      "mean": 541
+     }
+    }
+   }
+  },
+  {
+   "run": 2,
+   "warmup": false,
+   "samples_ms": [
+    102
+   ],
+   "stats": {
+    "n": 1,
+    "min": 102,
+    "p50": 102,
+    "p95": 102,
+    "p99": 102,
+    "max": 102,
+    "mean": 102
+   },
+   "extra": {
+    "submitted": 1,
+    "http_status_counts": {
+     "200": 1
+    },
+    "http_429": 0,
+    "http_503": 0,
+    "jobs_with_timing": 1,
+    "jobs_without_container_start": 0,
+    "jobs_never_finished": 0,
+    "ready_signal_timeouts": 0,
+    "queue_wait_ms": {
+     "samples": [
+      -7
+     ],
+     "stats": {
+      "n": 1,
+      "min": -7,
+      "p50": -7,
+      "p95": -7,
+      "p99": -7,
+      "max": -7,
+      "mean": -7
+     }
+    },
+    "enqueue_to_first_output_ms": {
+     "samples": [
+      489
+     ],
+     "stats": {
+      "n": 1,
+      "min": 489,
+      "p50": 489,
+      "p95": 489,
+      "p99": 489,
+      "max": 489,
+      "mean": 489
+     }
+    }
+   }
+  },
+  {
+   "run": 3,
+   "warmup": false,
+   "samples_ms": [
+    82
+   ],
+   "stats": {
+    "n": 1,
+    "min": 82,
+    "p50": 82,
+    "p95": 82,
+    "p99": 82,
+    "max": 82,
+    "mean": 82
+   },
+   "extra": {
+    "submitted": 1,
+    "http_status_counts": {
+     "200": 1
+    },
+    "http_429": 0,
+    "http_503": 0,
+    "jobs_with_timing": 1,
+    "jobs_without_container_start": 0,
+    "jobs_never_finished": 0,
+    "ready_signal_timeouts": 0,
+    "queue_wait_ms": {
+     "samples": [
+      -6
+     ],
+     "stats": {
+      "n": 1,
+      "min": -6,
+      "p50": -6,
+      "p95": -6,
+      "p99": -6,
+      "max": -6,
+      "mean": -6
+     }
+    },
+    "enqueue_to_first_output_ms": {
+     "samples": [
+      533
+     ],
+     "stats": {
+      "n": 1,
+      "min": 533,
+      "p50": 533,
+      "p95": 533,
+      "p99": 533,
+      "max": 533,
+      "mean": 533
+     }
+    }
+   }
+  }
+ ],
+ "summary": {
+  "median_run": 2,
+  "median_stats": {
+   "n": 1,
+   "min": 102,
+   "p50": 102,
+   "p95": 102,
+   "p99": 102,
+   "max": 102,
+   "mean": 102
+  },
+  "spread": {
+   "p50": {
+    "min": 82,
+    "max": 163
+   },
+   "p95": {
+    "min": 82,
+    "max": 163
+   },
+   "p99": {
+    "min": 82,
+    "max": 163
+   }
+  }
+ },
+ "notes": []
+}

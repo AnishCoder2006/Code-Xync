@@ -5,6 +5,7 @@ import { promisify } from "util";
 import { v4 as uuidv4 } from "uuid";
 import Redis from "ioredis";
 import { runInDocker } from "../../services/worker/src/sandbox/dockerRunner";
+import { warmPool } from "../../services/worker/src/sandbox/warmPool";
 import { prisma } from "../../services/worker/src/lib/prisma";
 
 const execFileAsync = promisify(execFile);
@@ -18,6 +19,7 @@ interface AttackResult {
   leftoverContainers: number;
   notes: string;
   passed: boolean;
+  sandbox: string;
 }
 
 const redisUrl = process.env.REDIS_URL || "redis://localhost:6380";
@@ -155,6 +157,14 @@ async function main() {
   const results: AttackResult[] = [];
   let allPassed = true;
 
+  // B7: with SANDBOX_WARM_POOL_SIZE>0, node/python payloads run in pre-started single-use
+  // containers. Wait until the pool has a ready python container before attacking.
+  if (warmPool.enabled) {
+    warmPool.start();
+    for (let i = 0; i < 300 && warmPool.readyCount("python") === 0; i++) await new Promise((r) => setTimeout(r, 100));
+    console.log(`Warm pool enabled: ${warmPool.readyCount("python")} python / ${warmPool.readyCount("javascript")} node containers ready`);
+  }
+
   for (const item of payloads) {
     const filePath = path.join(attackDir, item.file);
     const code = await fs.readFile(filePath, "utf-8");
@@ -183,6 +193,10 @@ async function main() {
       } catch {}
     });
 
+    if (warmPool.enabled) {
+      console.log(`[pool] before ${item.file}: ready python=${warmPool.readyCount("python")} node=${warmPool.readyCount("javascript")} stats=${JSON.stringify(warmPool.stats)}`);
+    }
+
     // Provide ready signal for BLPOP rendezvous
     await redis.lpush(`execution:ready:${jobId}`, "1");
 
@@ -209,7 +223,10 @@ async function main() {
     const dbLog = await prisma.executionLog.findUnique({ where: { jobId } });
 
     // Assert container cleanup
-    const leftoverCount = await getCodesyncContainerCount(`codesync-job-${jobId}`);
+    // Check the container the job actually ran in (a warm container has its own name).
+    const usedName = execResult.containerName ?? `codesync-job-${jobId}`;
+    for (let i = 0; i < 30 && (await getCodesyncContainerCount(usedName)) > 0; i++) await new Promise((r) => setTimeout(r, 200));
+    const leftoverCount = await getCodesyncContainerCount(usedName);
     const hostResponsive = await checkHostResponsiveness();
 
     const isPassed = item.validate(execResult, events, dbLog, hostResponsive) && leftoverCount === 0;
@@ -227,11 +244,17 @@ async function main() {
       leftoverContainers: leftoverCount,
       notes: isPassed ? "Contained & cleaned up" : "LIMIT ESCAPE OR CLEANUP FAILED",
       passed: isPassed,
+      sandbox: execResult.sandbox ?? "fresh",
     });
   }
 
-  // Final check: assert zero leftover codesync containers
-  const totalLeftovers = await getCodesyncContainerCount();
+  // Final check: assert zero leftover codesync containers (idle warm containers are
+  // stopped first; any warm container that ran a job must already be gone).
+  if (warmPool.enabled) {
+    warmPool.stop();
+    for (let i = 0; i < 75 && (await getCodesyncContainerCount("codesync-warm-")) > 0; i++) await new Promise((r) => setTimeout(r, 200));
+  }
+  const totalLeftovers = (await getCodesyncContainerCount()) + (await getCodesyncContainerCount("codesync-warm-"));
 
   console.log("\n======================================================================================================");
   console.log("| Payload                | Expected Result                               | Actual Status | Exit | Containers | Result |");
@@ -244,7 +267,7 @@ async function main() {
     const exitCol = pad(String(r.exitCode), 4);
     const cntCol = pad(String(r.leftoverContainers), 10);
     const passCol = r.passed ? "PASS" : "FAIL";
-    console.log(`| ${fileCol} | ${expCol} | ${statusCol} | ${exitCol} | ${cntCol} | ${passCol}   |`);
+    console.log(`| ${fileCol} | ${expCol} | ${statusCol} | ${exitCol} | ${cntCol} | ${passCol}   | ${r.sandbox}`);
   }
   console.log("======================================================================================================\n");
 
@@ -252,6 +275,23 @@ async function main() {
   if (totalLeftovers > 0) {
     console.error("FAIL: Leftover containers found in docker ps -a!");
     allPassed = false;
+  }
+
+  if (warmPool.enabled) {
+    const summary = {
+      name: "b7-attack-suite-warm",
+      timestamp: new Date().toISOString(),
+      conditions: { warm_pool_size_per_language: Number(process.env.SANDBOX_WARM_POOL_SIZE) },
+      results,
+      summary: {
+        total: results.length,
+        passed: results.filter((r) => r.passed).length,
+        via_warm_pool: results.filter((r) => r.sandbox === "warm").length,
+        leftover_containers: totalLeftovers,
+        log: "benchmarks/results/logs/b7-attack-suite-warm.log",
+      },
+    };
+    await fs.writeFile(path.resolve(__dirname, "../results/b7-attack-suite-warm.json"), JSON.stringify(summary, null, 1));
   }
 
   await redis.quit();

@@ -27,14 +27,68 @@ jobs:
       - run: echo "wire up npm install / test steps per service"
 
   playwright:
+    # Week 4 Task 9 / Phase 6 A2: two sync nodes + LB + API + the web app built with
+    # NEXT_PUBLIC_E2E=1, then the real-browser suite and the websocket-protocol suite.
+    # Nodes, LB, API and web are started by tests/*/global-setup.ts as plain processes so
+    # tests can kill and restart nodes.
     runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: codesync
+        ports: ["5432:5432"]
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 5
+      redis:
+        image: redis:7
+        ports: ["6380:6379"]
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 5
+    env:
+      NODE_ENV: test
+      DATABASE_URL: postgresql://postgres:postgres@localhost:5432/codesync
+      DIRECT_URL: postgresql://postgres:postgres@localhost:5432/codesync
+      REDIS_URL: redis://localhost:6380
+      NEXT_TELEMETRY_DISABLED: "1"
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with:
           node-version: 20
-      # TODO: start web + sync + redis, then run tests/playwright suite
-      - run: echo "wire up Playwright convergence/reconnect/node-kill tests"
+          cache: npm
+      - name: Install dependencies (npm workspaces, root lockfile)
+        run: npm ci
+      - name: Apply migrations (migrate, not db push)
+        run: npx prisma migrate deploy && npx prisma generate
+      - name: Sync service schema copy is current
+        run: npm run prisma:check-schema -w services/sync
+      - name: Build sync service
+        run: npm run build -w services/sync
+      - name: Install Chromium
+        run: npx playwright install --with-deps chromium
+      - name: Production build has no /e2e/editor (A4)
+        run: npx tsx tests/test-a4-prod-404.ts
+      - name: Real-browser suite (tests/playwright)
+        working-directory: tests/playwright
+        run: npx playwright test
+      - name: WebSocket-protocol suite (tests/sync-protocol)
+        working-directory: tests/sync-protocol
+        run: npx playwright test
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: playwright-results
+          path: |
+            tests/playwright/test-results
+            tests/sync-protocol/test-results
 
   attack-suite:
     runs-on: ubuntu-latest
@@ -69,11 +123,11 @@ jobs:
         run: |
           docker build -f infra/docker/sandbox-images/node.Dockerfile -t codesync-sandbox-node .
           docker build -f infra/docker/sandbox-images/python.Dockerfile -t codesync-sandbox-python .
-      - name: Push Database Schema
+      - name: Apply migrations
         env:
           DATABASE_URL: postgresql://postgres:postgres@localhost:5432/codesync
           DIRECT_URL: postgresql://postgres:postgres@localhost:5432/codesync
-        run: npx prisma db push --schema=prisma/schema.prisma
+        run: npx prisma migrate deploy && npx prisma generate
       - name: Run Attack Containment Suite
         env:
           REDIS_URL: redis://localhost:6380

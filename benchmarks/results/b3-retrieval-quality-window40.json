@@ -1,0 +1,2007 @@
+{
+ "name": "b3-retrieval-quality-window40",
+ "title": "Retrieval quality, fixed 40-line windows: vector vs keyword vs hybrid",
+ "timestamp": "2026-11-24T08:05:14.000Z",
+ "git": {
+  "commit": null,
+  "commit_note": "branch main has no commits yet; numbers come from the uncommitted working tree",
+  "last_pushed_commit": "652296a6ff2656d1765588be5606f409a44ce3c9",
+  "uncommitted_paths": 254,
+  "source_digest": "7be6448dc5fe93fb",
+  "source_digest_dirs": [
+   "services/ai/app/rag",
+   "benchmarks/retrieval",
+   "benchmarks/ai-eval/cases"
+  ]
+ },
+ "environment": {
+  "os": "Windows 11 (AMD64)",
+  "cpu": "Intel64 Family 6 Model 170 Stepping 4, GenuineIntel",
+  "logical_cpus": 18,
+  "ram_gib": 15.4,
+  "python": "3.12.10",
+  "docker": "client 28.1.1 / server 28.1.1 (linux/amd64)",
+  "docker_desktop_note": "Qdrant runs in Docker Desktop (WSL2 VM); every query crosses the Windows<->VM boundary",
+  "load_generator_shares_machine": true,
+  "memory_at_start": {
+   "available_mib": 2937,
+   "committed_gib": 26.4,
+   "commit_limit_gib": 30.7,
+   "pages_per_sec": 0
+  }
+ },
+ "conditions": {
+  "corpus": "25 eval cases: each target file + its test file (test files are the distractors; no other distractor files exist in the repo)",
+  "corpus_points": 50,
+  "chunking": "fixed 40-line non-overlapping windows, function_name empty",
+  "query": "case_info.json description (the bug description)",
+  "relevance": "result from the case's target file whose line range overlaps the target function's range",
+  "embedder": "FastEmbed BAAI/bge-small-en-v1.5 (384-d, local CPU)",
+  "store": "Qdrant (cosine), one room, room_id filter on every query",
+  "keyword_mode": "QdrantStore.search_keywords: Qdrant MatchText of the whole query against function_name",
+  "hybrid_mode": "search.hybrid_search: RRF (k=60) of vector top-20 and keyword top-20",
+  "cut_off": "top 10"
+ },
+ "protocol": "1 warm-up + 3 measured runs over the same 25 queries (deterministic: identical across runs = True)",
+ "runs": [
+  {
+   "run": 0,
+   "warmup": true,
+   "modes": {
+    "vector": {
+     "hit_at_1": 0.8,
+     "hit_at_3": 1.0,
+     "mrr_at_10": 0.9,
+     "queries": 25,
+     "queries_with_any_result": 25,
+     "per_case": [
+      {
+       "case": "case_01_pagination",
+       "rank": 2,
+       "results": 10,
+       "top1": "case_01_pagination/test_pagination.py:1-8"
+      },
+      {
+       "case": "case_02_jwt_auth",
+       "rank": 2,
+       "results": 10,
+       "top1": "case_02_jwt_auth/test_auth.py:1-11"
+      },
+      {
+       "case": "case_03_tax_calc",
+       "rank": 1,
+       "results": 10,
+       "top1": "case_03_tax_calc/tax.py:1-15"
+      },
+      {
+       "case": "case_04_cache_ttl",
+       "rank": 1,
+       "results": 10,
+       "top1": "case_04_cache_ttl/cache.py:1-16"
+      },
+      {
+       "case": "case_05_rate_limiter",
+       "rank": 2,
+       "results": 10,
+       "top1": "case_05_rate_limiter/test_rate_limiter.py:1-11"
+      },
+      {
+       "case": "case_06_markdown_parser",
+       "rank": 1,
+       "results": 10,
+       "top1": "case_06_markdown_parser/markdown.js:1-31"
+      },
+      {
+       "case": "case_07_email_validator",
+       "rank": 2,
+       "results": 10,
+       "top1": "case_07_email_validator/validator.test.js:1-6"
+      },
+      {
+       "case": "case_08_retry_backoff",
+       "rank": 1,
+       "results": 10,
+       "top1": "case_08_retry_backoff/retry.js:1-12"
+      },
+      {
+       "case": "case_09_query_builder",
+       "rank": 2,
+       "results": 10,
+       "top1": "case_09_query_builder/query_builder.test.js:1-7"
+      },
+      {
+       "case": "case_10_queue_stats",
+       "rank": 1,
+       "results": 10,
+       "top1": "case_10_queue_stats/metrics.js:1-11"
+      },
+      {
+       "case": "case_11_string_truncate",
+       "rank": 1,
+       "results": 10,
+       "top1": "case_11_string_truncate/text_utils.py:1-10"
+      },
+      {
+       "case": "case_12_url_join",
+       "rank": 1,
+       "results": 10,
+       "top1": "case_12_url_join/url_utils.py:1-8"
+      },
+      {
+       "case": "case_13_hex_color",
+       "rank": 1,
+       "results": 10,
+       "top1": "case_13_hex_color/color.py:1-11"
+      },
+      {
+       "case": "case_14_user_age",
+       "rank": 1,
+       "results": 10,
+       "top1": "case_14_user_age/age.py:1-7"
+      },
+      {
+       "case": "case_15_binary_search",
+       "rank": 1,
+       "results": 10,
+       "top1": "case_15_binary_search/search_algo.py:1-15"
+      },
+      {
+       "case": "case_16_clamp_value",
+       "rank": 1,
+       "results": 10,
+       "top1": "case_16_clamp_value/math_utils.py:1-9"
+      },
+      {
+       "case": "case_17_levenshtein",
+       "rank": 1,
+       "results": 10,
+       "top1": "case_17_levenshtein/distance.py:1-4"
+      },
+      {
+       "case": "case_18_cookie_parser",
+       "rank": 1,
+       "results": 10,
+       "top1": "case_18_cookie_parser/cookie.py:1-11"
+      },
+      {
+       "case": "case_19_slugify",
+       "rank": 1,
+       "results": 10,
+       "top1": "case_19_slugify/slug.py:1-6"
+      },
+      {
+       "case": "case_20_median",
+       "rank": 1,
+       "results": 10,
+       "top1": "case_20_median/stats.py:1-8"
+      },
+      {
+       "case": "case_21_deep_clone",
+       "rank": 1,
+       "results": 10,
+       "top1": "case_21_deep_clone/dict_utils.py:1-6"
+      },
+      {
+       "case": "case_22_ip_filter",
+       "rank": 1,
+       "results": 10,
+       "top1": "case_22_ip_filter/net.py:1-4"
+      },
+      {
+       "case": "case_23_cron_interval",
+       "rank": 1,
+       "results": 10,
+       "top1": "case_23_cron_interval/cron_calc.py:1-5"
+      },
+      {
+       "case": "case_24_fizzbuzz_ext",
+       "rank": 1,
+       "results": 10,
+       "top1": "case_24_fizzbuzz_ext/fizzbuzz.py:1-10"
+      },
+      {
+       "case": "case_25_semantic_version",
+       "rank": 1,
+       "results": 10,
+       "top1": "case_25_semantic_version/semver.py:1-10"
+      }
+     ]
+    },
+    "keyword": {
+     "hit_at_1": 0.0,
+     "hit_at_3": 0.0,
+     "mrr_at_10": 0.0,
+     "queries": 25,
+     "queries_with_any_result": 0,
+     "per_case": [
+      {
+       "case": "case_01_pagination",
+       "rank": null,
+       "results": 0,
+       "top1": null
+      },
+      {
+       "case": "case_02_jwt_auth",
+       "rank": null,
+       "results": 0,
+       "top1": null
+      },
+      {
+       "case": "case_03_tax_calc",
+       "rank": null,
+       "results": 0,
+       "top1": null
+      },
+      {
+       "case": "case_04_cache_ttl",
+       "rank": null,
+       "results": 0,
+       "top1": null
+      },
+      {
+       "case": "case_05_rate_limiter",
+       "rank": null,
+       "results": 0,
+       "top1": null
+      },
+      {
+       "case": "case_06_markdown_parser",
+       "rank": null,
+       "results": 0,
+       "top1": null
+      },
+      {
+       "case": "case_07_email_validator",
+       "rank": null,
+       "results": 0,
+       "top1": null
+      },
+      {
+       "case": "case_08_retry_backoff",
+       "rank": null,
+       "results": 0,
+       "top1": null
+      },
+      {
+       "case": "case_09_query_builder",
+       "rank": null,
+       "results": 0,
+       "top1": null
+      },
+      {
+       "case": "case_10_queue_stats",
+       "rank": null,
+       "results": 0,
+       "top1": null
+      },
+      {
+       "case": "case_11_string_truncate",
+       "rank": null,
+       "results": 0,
+       "top1": null
+      },
+      {
+       "case": "case_12_url_join",
+       "rank": null,
+       "results": 0,
+       "top1": null
+      },
+      {
+       "case": "case_13_hex_color",
+       "rank": null,
+       "results": 0,
+       "top1": null
+      },
+      {
+       "case": "case_14_user_age",
+       "rank": null,
+       "results": 0,
+       "top1": null
+      },
+      {
+       "case": "case_15_binary_search",
+       "rank": null,
+       "results": 0,
+       "top1": null
+      },
+      {
+       "case": "case_16_clamp_value",
+       "rank": null,
+       "results": 0,
+       "top1": null
+      },
+      {
+       "case": "case_17_levenshtein",
+       "rank": null,
+       "results": 0,
+       "top1": null
+      },
+      {
+       "case": "case_18_cookie_parser",
+       "rank": null,
+       "results": 0,
+       "top1": null
+      },
+      {
+       "case": "case_19_slugify",
+       "rank": null,
+       "results": 0,
+       "top1": null
+      },
+      {
+       "case": "case_20_median",
+       "rank": null,
+       "results": 0,
+       "top1": null
+      },
+      {
+       "case": "case_21_deep_clone",
+       "rank": null,
+       "results": 0,
+       "top1": null
+      },
+      {
+       "case": "case_22_ip_filter",
+       "rank": null,
+       "results": 0,
+       "top1": null
+      },
+      {
+       "case": "case_23_cron_interval",
+       "rank": null,
+       "results": 0,
+       "top1": null
+      },
+      {
+       "case": "case_24_fizzbuzz_ext",
+       "rank": null,
+       "results": 0,
+       "top1": null
+      },
+      {
+       "case": "case_25_semantic_version",
+       "rank": null,
+       "results": 0,
+       "top1": null
+      }
+     ]
+    },
+    "hybrid": {
+     "hit_at_1": 0.8,
+     "hit_at_3": 1.0,
+     "mrr_at_10": 0.9,
+     "queries": 25,
+     "queries_with_any_result": 25,
+     "per_case": [
+      {
+       "case": "case_01_pagination",
+       "rank": 2,
+       "results": 10,
+       "top1": "case_01_pagination/test_pagination.py:1-8"
+      },
+      {
+       "case": "case_02_jwt_auth",
+       "rank": 2,
+       "results": 10,
+       "top1": "case_02_jwt_auth/test_auth.py:1-11"
+      },
+      {
+       "case": "case_03_tax_calc",
+       "rank": 1,
+       "results": 10,
+       "top1": "case_03_tax_calc/tax.py:1-15"
+      },
+      {
+       "case": "case_04_cache_ttl",
+       "rank": 1,
+       "results": 10,
+       "top1": "case_04_cache_ttl/cache.py:1-16"
+      },
+      {
+       "case": "case_05_rate_limiter",
+       "rank": 2,
+       "results": 10,
+       "top1": "case_05_rate_limiter/test_rate_limiter.py:1-11"
+      },
+      {
+       "case": "case_06_markdown_parser",
+       "rank": 1,
+       "results": 10,
+       "top1": "case_06_markdown_parser/markdown.js:1-31"
+      },
+      {
+       "case": "case_07_email_validator",
+       "rank": 2,
+       "results": 10,
+       "top1": "case_07_email_validator/validator.test.js:1-6"
+      },
+      {
+       "case": "case_08_retry_backoff",
+       "rank": 1,
+       "results": 10,
+       "top1": "case_08_retry_backoff/retry.js:1-12"
+      },
+      {
+       "case": "case_09_query_builder",
+       "rank": 2,
+       "results": 10,
+       "top1": "case_09_query_builder/query_builder.test.js:1-7"
+      },
+      {
+       "case": "case_10_queue_stats",
+       "rank": 1,
+       "results": 10,
+       "top1": "case_10_queue_stats/metrics.js:1-11"
+      },
+      {
+       "case": "case_11_string_truncate",
+       "rank": 1,
+       "results": 10,
+       "top1": "case_11_string_truncate/text_utils.py:1-10"
+      },
+      {
+       "case": "case_12_url_join",
+       "rank": 1,
+       "results": 10,
+       "top1": "case_12_url_join/url_utils.py:1-8"
+      },
+      {
+       "case": "case_13_hex_color",
+       "rank": 1,
+       "results": 10,
+       "top1": "case_13_hex_color/color.py:1-11"
+      },
+      {
+       "case": "case_14_user_age",
+       "rank": 1,
+       "results": 10,
+       "top1": "case_14_user_age/age.py:1-7"
+      },
+      {
+       "case": "case_15_binary_search",
+       "rank": 1,
+       "results": 10,
+       "top1": "case_15_binary_search/search_algo.py:1-15"
+      },
+      {
+       "case": "case_16_clamp_value",
+       "rank": 1,
+       "results": 10,
+       "top1": "case_16_clamp_value/math_utils.py:1-9"
+      },
+      {
+       "case": "case_17_levenshtein",
+       "rank": 1,
+       "results": 10,
+       "top1": "case_17_levenshtein/distance.py:1-4"
+      },
+      {
+       "case": "case_18_cookie_parser",
+       "rank": 1,
+       "results": 10,
+       "top1": "case_18_cookie_parser/cookie.py:1-11"
+      },
+      {
+       "case": "case_19_slugify",
+       "rank": 1,
+       "results": 10,
+       "top1": "case_19_slugify/slug.py:1-6"
+      },
+      {
+       "case": "case_20_median",
+       "rank": 1,
+       "results": 10,
+       "top1": "case_20_median/stats.py:1-8"
+      },
+      {
+       "case": "case_21_deep_clone",
+       "rank": 1,
+       "results": 10,
+       "top1": "case_21_deep_clone/dict_utils.py:1-6"
+      },
+      {
+       "case": "case_22_ip_filter",
+       "rank": 1,
+       "results": 10,
+       "top1": "case_22_ip_filter/net.py:1-4"
+      },
+      {
+       "case": "case_23_cron_interval",
+       "rank": 1,
+       "results": 10,
+       "top1": "case_23_cron_interval/cron_calc.py:1-5"
+      },
+      {
+       "case": "case_24_fizzbuzz_ext",
+       "rank": 1,
+       "results": 10,
+       "top1": "case_24_fizzbuzz_ext/fizzbuzz.py:1-10"
+      },
+      {
+       "case": "case_25_semantic_version",
+       "rank": 1,
+       "results": 10,
+       "top1": "case_25_semantic_version/semver.py:1-10"
+      }
+     ]
+    }
+   }
+  },
+  {
+   "run": 1,
+   "warmup": false,
+   "modes": {
+    "vector": {
+     "hit_at_1": 0.8,
+     "hit_at_3": 1.0,
+     "mrr_at_10": 0.9,
+     "queries": 25,
+     "queries_with_any_result": 25,
+     "per_case": [
+      {
+       "case": "case_01_pagination",
+       "rank": 2,
+       "results": 10,
+       "top1": "case_01_pagination/test_pagination.py:1-8"
+      },
+      {
+       "case": "case_02_jwt_auth",
+       "rank": 2,
+       "results": 10,
+       "top1": "case_02_jwt_auth/test_auth.py:1-11"
+      },
+      {
+       "case": "case_03_tax_calc",
+       "rank": 1,
+       "results": 10,
+       "top1": "case_03_tax_calc/tax.py:1-15"
+      },
+      {
+       "case": "case_04_cache_ttl",
+       "rank": 1,
+       "results": 10,
+       "top1": "case_04_cache_ttl/cache.py:1-16"
+      },
+      {
+       "case": "case_05_rate_limiter",
+       "rank": 2,
+       "results": 10,
+       "top1": "case_05_rate_limiter/test_rate_limiter.py:1-11"
+      },
+      {
+       "case": "case_06_markdown_parser",
+       "rank": 1,
+       "results": 10,
+       "top1": "case_06_markdown_parser/markdown.js:1-31"
+      },
+      {
+       "case": "case_07_email_validator",
+       "rank": 2,
+       "results": 10,
+       "top1": "case_07_email_validator/validator.test.js:1-6"
+      },
+      {
+       "case": "case_08_retry_backoff",
+       "rank": 1,
+       "results": 10,
+       "top1": "case_08_retry_backoff/retry.js:1-12"
+      },
+      {
+       "case": "case_09_query_builder",
+       "rank": 2,
+       "results": 10,
+       "top1": "case_09_query_builder/query_builder.test.js:1-7"
+      },
+      {
+       "case": "case_10_queue_stats",
+       "rank": 1,
+       "results": 10,
+       "top1": "case_10_queue_stats/metrics.js:1-11"
+      },
+      {
+       "case": "case_11_string_truncate",
+       "rank": 1,
+       "results": 10,
+       "top1": "case_11_string_truncate/text_utils.py:1-10"
+      },
+      {
+       "case": "case_12_url_join",
+       "rank": 1,
+       "results": 10,
+       "top1": "case_12_url_join/url_utils.py:1-8"
+      },
+      {
+       "case": "case_13_hex_color",
+       "rank": 1,
+       "results": 10,
+       "top1": "case_13_hex_color/color.py:1-11"
+      },
+      {
+       "case": "case_14_user_age",
+       "rank": 1,
+       "results": 10,
+       "top1": "case_14_user_age/age.py:1-7"
+      },
+      {
+       "case": "case_15_binary_search",
+       "rank": 1,
+       "results": 10,
+       "top1": "case_15_binary_search/search_algo.py:1-15"
+      },
+      {
+       "case": "case_16_clamp_value",
+       "rank": 1,
+       "results": 10,
+       "top1": "case_16_clamp_value/math_utils.py:1-9"
+      },
+      {
+       "case": "case_17_levenshtein",
+       "rank": 1,
+       "results": 10,
+       "top1": "case_17_levenshtein/distance.py:1-4"
+      },
+      {
+       "case": "case_18_cookie_parser",
+       "rank": 1,
+       "results": 10,
+       "top1": "case_18_cookie_parser/cookie.py:1-11"
+      },
+      {
+       "case": "case_19_slugify",
+       "rank": 1,
+       "results": 10,
+       "top1": "case_19_slugify/slug.py:1-6"
+      },
+      {
+       "case": "case_20_median",
+       "rank": 1,
+       "results": 10,
+       "top1": "case_20_median/stats.py:1-8"
+      },
+      {
+       "case": "case_21_deep_clone",
+       "rank": 1,
+       "results": 10,
+       "top1": "case_21_deep_clone/dict_utils.py:1-6"
+      },
+      {
+       "case": "case_22_ip_filter",
+       "rank": 1,
+       "results": 10,
+       "top1": "case_22_ip_filter/net.py:1-4"
+      },
+      {
+       "case": "case_23_cron_interval",
+       "rank": 1,
+       "results": 10,
+       "top1": "case_23_cron_interval/cron_calc.py:1-5"
+      },
+      {
+       "case": "case_24_fizzbuzz_ext",
+       "rank": 1,
+       "results": 10,
+       "top1": "case_24_fizzbuzz_ext/fizzbuzz.py:1-10"
+      },
+      {
+       "case": "case_25_semantic_version",
+       "rank": 1,
+       "results": 10,
+       "top1": "case_25_semantic_version/semver.py:1-10"
+      }
+     ]
+    },
+    "keyword": {
+     "hit_at_1": 0.0,
+     "hit_at_3": 0.0,
+     "mrr_at_10": 0.0,
+     "queries": 25,
+     "queries_with_any_result": 0,
+     "per_case": [
+      {
+       "case": "case_01_pagination",
+       "rank": null,
+       "results": 0,
+       "top1": null
+      },
+      {
+       "case": "case_02_jwt_auth",
+       "rank": null,
+       "results": 0,
+       "top1": null
+      },
+      {
+       "case": "case_03_tax_calc",
+       "rank": null,
+       "results": 0,
+       "top1": null
+      },
+      {
+       "case": "case_04_cache_ttl",
+       "rank": null,
+       "results": 0,
+       "top1": null
+      },
+      {
+       "case": "case_05_rate_limiter",
+       "rank": null,
+       "results": 0,
+       "top1": null
+      },
+      {
+       "case": "case_06_markdown_parser",
+       "rank": null,
+       "results": 0,
+       "top1": null
+      },
+      {
+       "case": "case_07_email_validator",
+       "rank": null,
+       "results": 0,
+       "top1": null
+      },
+      {
+       "case": "case_08_retry_backoff",
+       "rank": null,
+       "results": 0,
+       "top1": null
+      },
+      {
+       "case": "case_09_query_builder",
+       "rank": null,
+       "results": 0,
+       "top1": null
+      },
+      {
+       "case": "case_10_queue_stats",
+       "rank": null,
+       "results": 0,
+       "top1": null
+      },
+      {
+       "case": "case_11_string_truncate",
+       "rank": null,
+       "results": 0,
+       "top1": null
+      },
+      {
+       "case": "case_12_url_join",
+       "rank": null,
+       "results": 0,
+       "top1": null
+      },
+      {
+       "case": "case_13_hex_color",
+       "rank": null,
+       "results": 0,
+       "top1": null
+      },
+      {
+       "case": "case_14_user_age",
+       "rank": null,
+       "results": 0,
+       "top1": null
+      },
+      {
+       "case": "case_15_binary_search",
+       "rank": null,
+       "results": 0,
+       "top1": null
+      },
+      {
+       "case": "case_16_clamp_value",
+       "rank": null,
+       "results": 0,
+       "top1": null
+      },
+      {
+       "case": "case_17_levenshtein",
+       "rank": null,
+       "results": 0,
+       "top1": null
+      },
+      {
+       "case": "case_18_cookie_parser",
+       "rank": null,
+       "results": 0,
+       "top1": null
+      },
+      {
+       "case": "case_19_slugify",
+       "rank": null,
+       "results": 0,
+       "top1": null
+      },
+      {
+       "case": "case_20_median",
+       "rank": null,
+       "results": 0,
+       "top1": null
+      },
+      {
+       "case": "case_21_deep_clone",
+       "rank": null,
+       "results": 0,
+       "top1": null
+      },
+      {
+       "case": "case_22_ip_filter",
+       "rank": null,
+       "results": 0,
+       "top1": null
+      },
+      {
+       "case": "case_23_cron_interval",
+       "rank": null,
+       "results": 0,
+       "top1": null
+      },
+      {
+       "case": "case_24_fizzbuzz_ext",
+       "rank": null,
+       "results": 0,
+       "top1": null
+      },
+      {
+       "case": "case_25_semantic_version",
+       "rank": null,
+       "results": 0,
+       "top1": null
+      }
+     ]
+    },
+    "hybrid": {
+     "hit_at_1": 0.8,
+     "hit_at_3": 1.0,
+     "mrr_at_10": 0.9,
+     "queries": 25,
+     "queries_with_any_result": 25,
+     "per_case": [
+      {
+       "case": "case_01_pagination",
+       "rank": 2,
+       "results": 10,
+       "top1": "case_01_pagination/test_pagination.py:1-8"
+      },
+      {
+       "case": "case_02_jwt_auth",
+       "rank": 2,
+       "results": 10,
+       "top1": "case_02_jwt_auth/test_auth.py:1-11"
+      },
+      {
+       "case": "case_03_tax_calc",
+       "rank": 1,
+       "results": 10,
+       "top1": "case_03_tax_calc/tax.py:1-15"
+      },
+      {
+       "case": "case_04_cache_ttl",
+       "rank": 1,
+       "results": 10,
+       "top1": "case_04_cache_ttl/cache.py:1-16"
+      },
+      {
+       "case": "case_05_rate_limiter",
+       "rank": 2,
+       "results": 10,
+       "top1": "case_05_rate_limiter/test_rate_limiter.py:1-11"
+      },
+      {
+       "case": "case_06_markdown_parser",
+       "rank": 1,
+       "results": 10,
+       "top1": "case_06_markdown_parser/markdown.js:1-31"
+      },
+      {
+       "case": "case_07_email_validator",
+       "rank": 2,
+       "results": 10,
+       "top1": "case_07_email_validator/validator.test.js:1-6"
+      },
+      {
+       "case": "case_08_retry_backoff",
+       "rank": 1,
+       "results": 10,
+       "top1": "case_08_retry_backoff/retry.js:1-12"
+      },
+      {
+       "case": "case_09_query_builder",
+       "rank": 2,
+       "results": 10,
+       "top1": "case_09_query_builder/query_builder.test.js:1-7"
+      },
+      {
+       "case": "case_10_queue_stats",
+       "rank": 1,
+       "results": 10,
+       "top1": "case_10_queue_stats/metrics.js:1-11"
+      },
+      {
+       "case": "case_11_string_truncate",
+       "rank": 1,
+       "results": 10,
+       "top1": "case_11_string_truncate/text_utils.py:1-10"
+      },
+      {
+       "case": "case_12_url_join",
+       "rank": 1,
+       "results": 10,
+       "top1": "case_12_url_join/url_utils.py:1-8"
+      },
+      {
+       "case": "case_13_hex_color",
+       "rank": 1,
+       "results": 10,
+       "top1": "case_13_hex_color/color.py:1-11"
+      },
+      {
+       "case": "case_14_user_age",
+       "rank": 1,
+       "results": 10,
+       "top1": "case_14_user_age/age.py:1-7"
+      },
+      {
+       "case": "case_15_binary_search",
+       "rank": 1,
+       "results": 10,
+       "top1": "case_15_binary_search/search_algo.py:1-15"
+      },
+      {
+       "case": "case_16_clamp_value",
+       "rank": 1,
+       "results": 10,
+       "top1": "case_16_clamp_value/math_utils.py:1-9"
+      },
+      {
+       "case": "case_17_levenshtein",
+       "rank": 1,
+       "results": 10,
+       "top1": "case_17_levenshtein/distance.py:1-4"
+      },
+      {
+       "case": "case_18_cookie_parser",
+       "rank": 1,
+       "results": 10,
+       "top1": "case_18_cookie_parser/cookie.py:1-11"
+      },
+      {
+       "case": "case_19_slugify",
+       "rank": 1,
+       "results": 10,
+       "top1": "case_19_slugify/slug.py:1-6"
+      },
+      {
+       "case": "case_20_median",
+       "rank": 1,
+       "results": 10,
+       "top1": "case_20_median/stats.py:1-8"
+      },
+      {
+       "case": "case_21_deep_clone",
+       "rank": 1,
+       "results": 10,
+       "top1": "case_21_deep_clone/dict_utils.py:1-6"
+      },
+      {
+       "case": "case_22_ip_filter",
+       "rank": 1,
+       "results": 10,
+       "top1": "case_22_ip_filter/net.py:1-4"
+      },
+      {
+       "case": "case_23_cron_interval",
+       "rank": 1,
+       "results": 10,
+       "top1": "case_23_cron_interval/cron_calc.py:1-5"
+      },
+      {
+       "case": "case_24_fizzbuzz_ext",
+       "rank": 1,
+       "results": 10,
+       "top1": "case_24_fizzbuzz_ext/fizzbuzz.py:1-10"
+      },
+      {
+       "case": "case_25_semantic_version",
+       "rank": 1,
+       "results": 10,
+       "top1": "case_25_semantic_version/semver.py:1-10"
+      }
+     ]
+    }
+   }
+  },
+  {
+   "run": 2,
+   "warmup": false,
+   "modes": {
+    "vector": {
+     "hit_at_1": 0.8,
+     "hit_at_3": 1.0,
+     "mrr_at_10": 0.9,
+     "queries": 25,
+     "queries_with_any_result": 25,
+     "per_case": [
+      {
+       "case": "case_01_pagination",
+       "rank": 2,
+       "results": 10,
+       "top1": "case_01_pagination/test_pagination.py:1-8"
+      },
+      {
+       "case": "case_02_jwt_auth",
+       "rank": 2,
+       "results": 10,
+       "top1": "case_02_jwt_auth/test_auth.py:1-11"
+      },
+      {
+       "case": "case_03_tax_calc",
+       "rank": 1,
+       "results": 10,
+       "top1": "case_03_tax_calc/tax.py:1-15"
+      },
+      {
+       "case": "case_04_cache_ttl",
+       "rank": 1,
+       "results": 10,
+       "top1": "case_04_cache_ttl/cache.py:1-16"
+      },
+      {
+       "case": "case_05_rate_limiter",
+       "rank": 2,
+       "results": 10,
+       "top1": "case_05_rate_limiter/test_rate_limiter.py:1-11"
+      },
+      {
+       "case": "case_06_markdown_parser",
+       "rank": 1,
+       "results": 10,
+       "top1": "case_06_markdown_parser/markdown.js:1-31"
+      },
+      {
+       "case": "case_07_email_validator",
+       "rank": 2,
+       "results": 10,
+       "top1": "case_07_email_validator/validator.test.js:1-6"
+      },
+      {
+       "case": "case_08_retry_backoff",
+       "rank": 1,
+       "results": 10,
+       "top1": "case_08_retry_backoff/retry.js:1-12"
+      },
+      {
+       "case": "case_09_query_builder",
+       "rank": 2,
+       "results": 10,
+       "top1": "case_09_query_builder/query_builder.test.js:1-7"
+      },
+      {
+       "case": "case_10_queue_stats",
+       "rank": 1,
+       "results": 10,
+       "top1": "case_10_queue_stats/metrics.js:1-11"
+      },
+      {
+       "case": "case_11_string_truncate",
+       "rank": 1,
+       "results": 10,
+       "top1": "case_11_string_truncate/text_utils.py:1-10"
+      },
+      {
+       "case": "case_12_url_join",
+       "rank": 1,
+       "results": 10,
+       "top1": "case_12_url_join/url_utils.py:1-8"
+      },
+      {
+       "case": "case_13_hex_color",
+       "rank": 1,
+       "results": 10,
+       "top1": "case_13_hex_color/color.py:1-11"
+      },
+      {
+       "case": "case_14_user_age",
+       "rank": 1,
+       "results": 10,
+       "top1": "case_14_user_age/age.py:1-7"
+      },
+      {
+       "case": "case_15_binary_search",
+       "rank": 1,
+       "results": 10,
+       "top1": "case_15_binary_search/search_algo.py:1-15"
+      },
+      {
+       "case": "case_16_clamp_value",
+       "rank": 1,
+       "results": 10,
+       "top1": "case_16_clamp_value/math_utils.py:1-9"
+      },
+      {
+       "case": "case_17_levenshtein",
+       "rank": 1,
+       "results": 10,
+       "top1": "case_17_levenshtein/distance.py:1-4"
+      },
+      {
+       "case": "case_18_cookie_parser",
+       "rank": 1,
+       "results": 10,
+       "top1": "case_18_cookie_parser/cookie.py:1-11"
+      },
+      {
+       "case": "case_19_slugify",
+       "rank": 1,
+       "results": 10,
+       "top1": "case_19_slugify/slug.py:1-6"
+      },
+      {
+       "case": "case_20_median",
+       "rank": 1,
+       "results": 10,
+       "top1": "case_20_median/stats.py:1-8"
+      },
+      {
+       "case": "case_21_deep_clone",
+       "rank": 1,
+       "results": 10,
+       "top1": "case_21_deep_clone/dict_utils.py:1-6"
+      },
+      {
+       "case": "case_22_ip_filter",
+       "rank": 1,
+       "results": 10,
+       "top1": "case_22_ip_filter/net.py:1-4"
+      },
+      {
+       "case": "case_23_cron_interval",
+       "rank": 1,
+       "results": 10,
+       "top1": "case_23_cron_interval/cron_calc.py:1-5"
+      },
+      {
+       "case": "case_24_fizzbuzz_ext",
+       "rank": 1,
+       "results": 10,
+       "top1": "case_24_fizzbuzz_ext/fizzbuzz.py:1-10"
+      },
+      {
+       "case": "case_25_semantic_version",
+       "rank": 1,
+       "results": 10,
+       "top1": "case_25_semantic_version/semver.py:1-10"
+      }
+     ]
+    },
+    "keyword": {
+     "hit_at_1": 0.0,
+     "hit_at_3": 0.0,
+     "mrr_at_10": 0.0,
+     "queries": 25,
+     "queries_with_any_result": 0,
+     "per_case": [
+      {
+       "case": "case_01_pagination",
+       "rank": null,
+       "results": 0,
+       "top1": null
+      },
+      {
+       "case": "case_02_jwt_auth",
+       "rank": null,
+       "results": 0,
+       "top1": null
+      },
+      {
+       "case": "case_03_tax_calc",
+       "rank": null,
+       "results": 0,
+       "top1": null
+      },
+      {
+       "case": "case_04_cache_ttl",
+       "rank": null,
+       "results": 0,
+       "top1": null
+      },
+      {
+       "case": "case_05_rate_limiter",
+       "rank": null,
+       "results": 0,
+       "top1": null
+      },
+      {
+       "case": "case_06_markdown_parser",
+       "rank": null,
+       "results": 0,
+       "top1": null
+      },
+      {
+       "case": "case_07_email_validator",
+       "rank": null,
+       "results": 0,
+       "top1": null
+      },
+      {
+       "case": "case_08_retry_backoff",
+       "rank": null,
+       "results": 0,
+       "top1": null
+      },
+      {
+       "case": "case_09_query_builder",
+       "rank": null,
+       "results": 0,
+       "top1": null
+      },
+      {
+       "case": "case_10_queue_stats",
+       "rank": null,
+       "results": 0,
+       "top1": null
+      },
+      {
+       "case": "case_11_string_truncate",
+       "rank": null,
+       "results": 0,
+       "top1": null
+      },
+      {
+       "case": "case_12_url_join",
+       "rank": null,
+       "results": 0,
+       "top1": null
+      },
+      {
+       "case": "case_13_hex_color",
+       "rank": null,
+       "results": 0,
+       "top1": null
+      },
+      {
+       "case": "case_14_user_age",
+       "rank": null,
+       "results": 0,
+       "top1": null
+      },
+      {
+       "case": "case_15_binary_search",
+       "rank": null,
+       "results": 0,
+       "top1": null
+      },
+      {
+       "case": "case_16_clamp_value",
+       "rank": null,
+       "results": 0,
+       "top1": null
+      },
+      {
+       "case": "case_17_levenshtein",
+       "rank": null,
+       "results": 0,
+       "top1": null
+      },
+      {
+       "case": "case_18_cookie_parser",
+       "rank": null,
+       "results": 0,
+       "top1": null
+      },
+      {
+       "case": "case_19_slugify",
+       "rank": null,
+       "results": 0,
+       "top1": null
+      },
+      {
+       "case": "case_20_median",
+       "rank": null,
+       "results": 0,
+       "top1": null
+      },
+      {
+       "case": "case_21_deep_clone",
+       "rank": null,
+       "results": 0,
+       "top1": null
+      },
+      {
+       "case": "case_22_ip_filter",
+       "rank": null,
+       "results": 0,
+       "top1": null
+      },
+      {
+       "case": "case_23_cron_interval",
+       "rank": null,
+       "results": 0,
+       "top1": null
+      },
+      {
+       "case": "case_24_fizzbuzz_ext",
+       "rank": null,
+       "results": 0,
+       "top1": null
+      },
+      {
+       "case": "case_25_semantic_version",
+       "rank": null,
+       "results": 0,
+       "top1": null
+      }
+     ]
+    },
+    "hybrid": {
+     "hit_at_1": 0.8,
+     "hit_at_3": 1.0,
+     "mrr_at_10": 0.9,
+     "queries": 25,
+     "queries_with_any_result": 25,
+     "per_case": [
+      {
+       "case": "case_01_pagination",
+       "rank": 2,
+       "results": 10,
+       "top1": "case_01_pagination/test_pagination.py:1-8"
+      },
+      {
+       "case": "case_02_jwt_auth",
+       "rank": 2,
+       "results": 10,
+       "top1": "case_02_jwt_auth/test_auth.py:1-11"
+      },
+      {
+       "case": "case_03_tax_calc",
+       "rank": 1,
+       "results": 10,
+       "top1": "case_03_tax_calc/tax.py:1-15"
+      },
+      {
+       "case": "case_04_cache_ttl",
+       "rank": 1,
+       "results": 10,
+       "top1": "case_04_cache_ttl/cache.py:1-16"
+      },
+      {
+       "case": "case_05_rate_limiter",
+       "rank": 2,
+       "results": 10,
+       "top1": "case_05_rate_limiter/test_rate_limiter.py:1-11"
+      },
+      {
+       "case": "case_06_markdown_parser",
+       "rank": 1,
+       "results": 10,
+       "top1": "case_06_markdown_parser/markdown.js:1-31"
+      },
+      {
+       "case": "case_07_email_validator",
+       "rank": 2,
+       "results": 10,
+       "top1": "case_07_email_validator/validator.test.js:1-6"
+      },
+      {
+       "case": "case_08_retry_backoff",
+       "rank": 1,
+       "results": 10,
+       "top1": "case_08_retry_backoff/retry.js:1-12"
+      },
+      {
+       "case": "case_09_query_builder",
+       "rank": 2,
+       "results": 10,
+       "top1": "case_09_query_builder/query_builder.test.js:1-7"
+      },
+      {
+       "case": "case_10_queue_stats",
+       "rank": 1,
+       "results": 10,
+       "top1": "case_10_queue_stats/metrics.js:1-11"
+      },
+      {
+       "case": "case_11_string_truncate",
+       "rank": 1,
+       "results": 10,
+       "top1": "case_11_string_truncate/text_utils.py:1-10"
+      },
+      {
+       "case": "case_12_url_join",
+       "rank": 1,
+       "results": 10,
+       "top1": "case_12_url_join/url_utils.py:1-8"
+      },
+      {
+       "case": "case_13_hex_color",
+       "rank": 1,
+       "results": 10,
+       "top1": "case_13_hex_color/color.py:1-11"
+      },
+      {
+       "case": "case_14_user_age",
+       "rank": 1,
+       "results": 10,
+       "top1": "case_14_user_age/age.py:1-7"
+      },
+      {
+       "case": "case_15_binary_search",
+       "rank": 1,
+       "results": 10,
+       "top1": "case_15_binary_search/search_algo.py:1-15"
+      },
+      {
+       "case": "case_16_clamp_value",
+       "rank": 1,
+       "results": 10,
+       "top1": "case_16_clamp_value/math_utils.py:1-9"
+      },
+      {
+       "case": "case_17_levenshtein",
+       "rank": 1,
+       "results": 10,
+       "top1": "case_17_levenshtein/distance.py:1-4"
+      },
+      {
+       "case": "case_18_cookie_parser",
+       "rank": 1,
+       "results": 10,
+       "top1": "case_18_cookie_parser/cookie.py:1-11"
+      },
+      {
+       "case": "case_19_slugify",
+       "rank": 1,
+       "results": 10,
+       "top1": "case_19_slugify/slug.py:1-6"
+      },
+      {
+       "case": "case_20_median",
+       "rank": 1,
+       "results": 10,
+       "top1": "case_20_median/stats.py:1-8"
+      },
+      {
+       "case": "case_21_deep_clone",
+       "rank": 1,
+       "results": 10,
+       "top1": "case_21_deep_clone/dict_utils.py:1-6"
+      },
+      {
+       "case": "case_22_ip_filter",
+       "rank": 1,
+       "results": 10,
+       "top1": "case_22_ip_filter/net.py:1-4"
+      },
+      {
+       "case": "case_23_cron_interval",
+       "rank": 1,
+       "results": 10,
+       "top1": "case_23_cron_interval/cron_calc.py:1-5"
+      },
+      {
+       "case": "case_24_fizzbuzz_ext",
+       "rank": 1,
+       "results": 10,
+       "top1": "case_24_fizzbuzz_ext/fizzbuzz.py:1-10"
+      },
+      {
+       "case": "case_25_semantic_version",
+       "rank": 1,
+       "results": 10,
+       "top1": "case_25_semantic_version/semver.py:1-10"
+      }
+     ]
+    }
+   }
+  },
+  {
+   "run": 3,
+   "warmup": false,
+   "modes": {
+    "vector": {
+     "hit_at_1": 0.8,
+     "hit_at_3": 1.0,
+     "mrr_at_10": 0.9,
+     "queries": 25,
+     "queries_with_any_result": 25,
+     "per_case": [
+      {
+       "case": "case_01_pagination",
+       "rank": 2,
+       "results": 10,
+       "top1": "case_01_pagination/test_pagination.py:1-8"
+      },
+      {
+       "case": "case_02_jwt_auth",
+       "rank": 2,
+       "results": 10,
+       "top1": "case_02_jwt_auth/test_auth.py:1-11"
+      },
+      {
+       "case": "case_03_tax_calc",
+       "rank": 1,
+       "results": 10,
+       "top1": "case_03_tax_calc/tax.py:1-15"
+      },
+      {
+       "case": "case_04_cache_ttl",
+       "rank": 1,
+       "results": 10,
+       "top1": "case_04_cache_ttl/cache.py:1-16"
+      },
+      {
+       "case": "case_05_rate_limiter",
+       "rank": 2,
+       "results": 10,
+       "top1": "case_05_rate_limiter/test_rate_limiter.py:1-11"
+      },
+      {
+       "case": "case_06_markdown_parser",
+       "rank": 1,
+       "results": 10,
+       "top1": "case_06_markdown_parser/markdown.js:1-31"
+      },
+      {
+       "case": "case_07_email_validator",
+       "rank": 2,
+       "results": 10,
+       "top1": "case_07_email_validator/validator.test.js:1-6"
+      },
+      {
+       "case": "case_08_retry_backoff",
+       "rank": 1,
+       "results": 10,
+       "top1": "case_08_retry_backoff/retry.js:1-12"
+      },
+      {
+       "case": "case_09_query_builder",
+       "rank": 2,
+       "results": 10,
+       "top1": "case_09_query_builder/query_builder.test.js:1-7"
+      },
+      {
+       "case": "case_10_queue_stats",
+       "rank": 1,
+       "results": 10,
+       "top1": "case_10_queue_stats/metrics.js:1-11"
+      },
+      {
+       "case": "case_11_string_truncate",
+       "rank": 1,
+       "results": 10,
+       "top1": "case_11_string_truncate/text_utils.py:1-10"
+      },
+      {
+       "case": "case_12_url_join",
+       "rank": 1,
+       "results": 10,
+       "top1": "case_12_url_join/url_utils.py:1-8"
+      },
+      {
+       "case": "case_13_hex_color",
+       "rank": 1,
+       "results": 10,
+       "top1": "case_13_hex_color/color.py:1-11"
+      },
+      {
+       "case": "case_14_user_age",
+       "rank": 1,
+       "results": 10,
+       "top1": "case_14_user_age/age.py:1-7"
+      },
+      {
+       "case": "case_15_binary_search",
+       "rank": 1,
+       "results": 10,
+       "top1": "case_15_binary_search/search_algo.py:1-15"
+      },
+      {
+       "case": "case_16_clamp_value",
+       "rank": 1,
+       "results": 10,
+       "top1": "case_16_clamp_value/math_utils.py:1-9"
+      },
+      {
+       "case": "case_17_levenshtein",
+       "rank": 1,
+       "results": 10,
+       "top1": "case_17_levenshtein/distance.py:1-4"
+      },
+      {
+       "case": "case_18_cookie_parser",
+       "rank": 1,
+       "results": 10,
+       "top1": "case_18_cookie_parser/cookie.py:1-11"
+      },
+      {
+       "case": "case_19_slugify",
+       "rank": 1,
+       "results": 10,
+       "top1": "case_19_slugify/slug.py:1-6"
+      },
+      {
+       "case": "case_20_median",
+       "rank": 1,
+       "results": 10,
+       "top1": "case_20_median/stats.py:1-8"
+      },
+      {
+       "case": "case_21_deep_clone",
+       "rank": 1,
+       "results": 10,
+       "top1": "case_21_deep_clone/dict_utils.py:1-6"
+      },
+      {
+       "case": "case_22_ip_filter",
+       "rank": 1,
+       "results": 10,
+       "top1": "case_22_ip_filter/net.py:1-4"
+      },
+      {
+       "case": "case_23_cron_interval",
+       "rank": 1,
+       "results": 10,
+       "top1": "case_23_cron_interval/cron_calc.py:1-5"
+      },
+      {
+       "case": "case_24_fizzbuzz_ext",
+       "rank": 1,
+       "results": 10,
+       "top1": "case_24_fizzbuzz_ext/fizzbuzz.py:1-10"
+      },
+      {
+       "case": "case_25_semantic_version",
+       "rank": 1,
+       "results": 10,
+       "top1": "case_25_semantic_version/semver.py:1-10"
+      }
+     ]
+    },
+    "keyword": {
+     "hit_at_1": 0.0,
+     "hit_at_3": 0.0,
+     "mrr_at_10": 0.0,
+     "queries": 25,
+     "queries_with_any_result": 0,
+     "per_case": [
+      {
+       "case": "case_01_pagination",
+       "rank": null,
+       "results": 0,
+       "top1": null
+      },
+      {
+       "case": "case_02_jwt_auth",
+       "rank": null,
+       "results": 0,
+       "top1": null
+      },
+      {
+       "case": "case_03_tax_calc",
+       "rank": null,
+       "results": 0,
+       "top1": null
+      },
+      {
+       "case": "case_04_cache_ttl",
+       "rank": null,
+       "results": 0,
+       "top1": null
+      },
+      {
+       "case": "case_05_rate_limiter",
+       "rank": null,
+       "results": 0,
+       "top1": null
+      },
+      {
+       "case": "case_06_markdown_parser",
+       "rank": null,
+       "results": 0,
+       "top1": null
+      },
+      {
+       "case": "case_07_email_validator",
+       "rank": null,
+       "results": 0,
+       "top1": null
+      },
+      {
+       "case": "case_08_retry_backoff",
+       "rank": null,
+       "results": 0,
+       "top1": null
+      },
+      {
+       "case": "case_09_query_builder",
+       "rank": null,
+       "results": 0,
+       "top1": null
+      },
+      {
+       "case": "case_10_queue_stats",
+       "rank": null,
+       "results": 0,
+       "top1": null
+      },
+      {
+       "case": "case_11_string_truncate",
+       "rank": null,
+       "results": 0,
+       "top1": null
+      },
+      {
+       "case": "case_12_url_join",
+       "rank": null,
+       "results": 0,
+       "top1": null
+      },
+      {
+       "case": "case_13_hex_color",
+       "rank": null,
+       "results": 0,
+       "top1": null
+      },
+      {
+       "case": "case_14_user_age",
+       "rank": null,
+       "results": 0,
+       "top1": null
+      },
+      {
+       "case": "case_15_binary_search",
+       "rank": null,
+       "results": 0,
+       "top1": null
+      },
+      {
+       "case": "case_16_clamp_value",
+       "rank": null,
+       "results": 0,
+       "top1": null
+      },
+      {
+       "case": "case_17_levenshtein",
+       "rank": null,
+       "results": 0,
+       "top1": null
+      },
+      {
+       "case": "case_18_cookie_parser",
+       "rank": null,
+       "results": 0,
+       "top1": null
+      },
+      {
+       "case": "case_19_slugify",
+       "rank": null,
+       "results": 0,
+       "top1": null
+      },
+      {
+       "case": "case_20_median",
+       "rank": null,
+       "results": 0,
+       "top1": null
+      },
+      {
+       "case": "case_21_deep_clone",
+       "rank": null,
+       "results": 0,
+       "top1": null
+      },
+      {
+       "case": "case_22_ip_filter",
+       "rank": null,
+       "results": 0,
+       "top1": null
+      },
+      {
+       "case": "case_23_cron_interval",
+       "rank": null,
+       "results": 0,
+       "top1": null
+      },
+      {
+       "case": "case_24_fizzbuzz_ext",
+       "rank": null,
+       "results": 0,
+       "top1": null
+      },
+      {
+       "case": "case_25_semantic_version",
+       "rank": null,
+       "results": 0,
+       "top1": null
+      }
+     ]
+    },
+    "hybrid": {
+     "hit_at_1": 0.8,
+     "hit_at_3": 1.0,
+     "mrr_at_10": 0.9,
+     "queries": 25,
+     "queries_with_any_result": 25,
+     "per_case": [
+      {
+       "case": "case_01_pagination",
+       "rank": 2,
+       "results": 10,
+       "top1": "case_01_pagination/test_pagination.py:1-8"
+      },
+      {
+       "case": "case_02_jwt_auth",
+       "rank": 2,
+       "results": 10,
+       "top1": "case_02_jwt_auth/test_auth.py:1-11"
+      },
+      {
+       "case": "case_03_tax_calc",
+       "rank": 1,
+       "results": 10,
+       "top1": "case_03_tax_calc/tax.py:1-15"
+      },
+      {
+       "case": "case_04_cache_ttl",
+       "rank": 1,
+       "results": 10,
+       "top1": "case_04_cache_ttl/cache.py:1-16"
+      },
+      {
+       "case": "case_05_rate_limiter",
+       "rank": 2,
+       "results": 10,
+       "top1": "case_05_rate_limiter/test_rate_limiter.py:1-11"
+      },
+      {
+       "case": "case_06_markdown_parser",
+       "rank": 1,
+       "results": 10,
+       "top1": "case_06_markdown_parser/markdown.js:1-31"
+      },
+      {
+       "case": "case_07_email_validator",
+       "rank": 2,
+       "results": 10,
+       "top1": "case_07_email_validator/validator.test.js:1-6"
+      },
+      {
+       "case": "case_08_retry_backoff",
+       "rank": 1,
+       "results": 10,
+       "top1": "case_08_retry_backoff/retry.js:1-12"
+      },
+      {
+       "case": "case_09_query_builder",
+       "rank": 2,
+       "results": 10,
+       "top1": "case_09_query_builder/query_builder.test.js:1-7"
+      },
+      {
+       "case": "case_10_queue_stats",
+       "rank": 1,
+       "results": 10,
+       "top1": "case_10_queue_stats/metrics.js:1-11"
+      },
+      {
+       "case": "case_11_string_truncate",
+       "rank": 1,
+       "results": 10,
+       "top1": "case_11_string_truncate/text_utils.py:1-10"
+      },
+      {
+       "case": "case_12_url_join",
+       "rank": 1,
+       "results": 10,
+       "top1": "case_12_url_join/url_utils.py:1-8"
+      },
+      {
+       "case": "case_13_hex_color",
+       "rank": 1,
+       "results": 10,
+       "top1": "case_13_hex_color/color.py:1-11"
+      },
+      {
+       "case": "case_14_user_age",
+       "rank": 1,
+       "results": 10,
+       "top1": "case_14_user_age/age.py:1-7"
+      },
+      {
+       "case": "case_15_binary_search",
+       "rank": 1,
+       "results": 10,
+       "top1": "case_15_binary_search/search_algo.py:1-15"
+      },
+      {
+       "case": "case_16_clamp_value",
+       "rank": 1,
+       "results": 10,
+       "top1": "case_16_clamp_value/math_utils.py:1-9"
+      },
+      {
+       "case": "case_17_levenshtein",
+       "rank": 1,
+       "results": 10,
+       "top1": "case_17_levenshtein/distance.py:1-4"
+      },
+      {
+       "case": "case_18_cookie_parser",
+       "rank": 1,
+       "results": 10,
+       "top1": "case_18_cookie_parser/cookie.py:1-11"
+      },
+      {
+       "case": "case_19_slugify",
+       "rank": 1,
+       "results": 10,
+       "top1": "case_19_slugify/slug.py:1-6"
+      },
+      {
+       "case": "case_20_median",
+       "rank": 1,
+       "results": 10,
+       "top1": "case_20_median/stats.py:1-8"
+      },
+      {
+       "case": "case_21_deep_clone",
+       "rank": 1,
+       "results": 10,
+       "top1": "case_21_deep_clone/dict_utils.py:1-6"
+      },
+      {
+       "case": "case_22_ip_filter",
+       "rank": 1,
+       "results": 10,
+       "top1": "case_22_ip_filter/net.py:1-4"
+      },
+      {
+       "case": "case_23_cron_interval",
+       "rank": 1,
+       "results": 10,
+       "top1": "case_23_cron_interval/cron_calc.py:1-5"
+      },
+      {
+       "case": "case_24_fizzbuzz_ext",
+       "rank": 1,
+       "results": 10,
+       "top1": "case_24_fizzbuzz_ext/fizzbuzz.py:1-10"
+      },
+      {
+       "case": "case_25_semantic_version",
+       "rank": 1,
+       "results": 10,
+       "top1": "case_25_semantic_version/semver.py:1-10"
+      }
+     ]
+    }
+   }
+  }
+ ],
+ "summary": {
+  "vector": {
+   "hit_at_1": 0.8,
+   "hit_at_3": 1.0,
+   "mrr_at_10": 0.9,
+   "queries": 25,
+   "queries_with_any_result": 25
+  },
+  "keyword": {
+   "hit_at_1": 0.0,
+   "hit_at_3": 0.0,
+   "mrr_at_10": 0.0,
+   "queries": 25,
+   "queries_with_any_result": 0
+  },
+  "hybrid": {
+   "hit_at_1": 0.8,
+   "hit_at_3": 1.0,
+   "mrr_at_10": 0.9,
+   "queries": 25,
+   "queries_with_any_result": 25
+  },
+  "runs_identical": true
+ },
+ "notes": [
+  "Target function located for all 25 cases."
+ ]
+}

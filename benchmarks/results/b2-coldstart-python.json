@@ -1,0 +1,259 @@
+{
+ "name": "b2-coldstart-python",
+ "title": "Sandbox cold start (python): docker run spawned -> first output",
+ "timestamp": "2026-11-24T11:02:42.276Z",
+ "git": {
+  "commit": null,
+  "commit_note": "branch main has no commits yet; numbers come from the uncommitted working tree",
+  "last_pushed_commit": "652296a6ff2656d1765588be5606f409a44ce3c9",
+  "uncommitted_paths": 258,
+  "source_digest": "3e49a536205e990c",
+  "source_digest_dirs": [
+   "services/worker/src",
+   "benchmarks/queue",
+   "benchmarks/lib",
+   "infra/docker/sandbox-images"
+  ]
+ },
+ "environment": {
+  "os": "Windows_NT 10.0.26200 (win32 x64)",
+  "cpu": "Intel(R) Core(TM) Ultra 5 125H",
+  "logical_cpus": 18,
+  "ram_gib": 15.4,
+  "node": "v22.15.1",
+  "docker": "client 28.1.1 / server 28.1.1 (linux/amd64)",
+  "docker_desktop_note": "Docker Desktop on Windows: containers run in the WSL2 VM; Redis/Postgres/Qdrant and sandboxes cross the Windows<->VM boundary",
+  "load_generator_shares_machine": true,
+  "memory_at_start": {
+   "available_mib": 560,
+   "committed_gib": 26.3,
+   "commit_limit_gib": 28.6,
+   "pages_per_sec": 0
+  }
+ },
+ "conditions": {
+  "language": "python",
+  "image": "codesync-sandbox-python",
+  "program": "print(\"b2\")",
+  "worker_concurrency": 1,
+  "jobs": "sequential, one at a time, queue empty",
+  "docker": "Docker Desktop on Windows (WSL2 VM); a fresh --rm container per job (never reused)",
+  "samples_ms_is": "firstOutputAt - dockerSpawnAt (container create + start + runtime boot + first print)"
+ },
+ "protocol": "1 warm-up run (3 jobs) + 3 measured runs (10 jobs each)",
+ "runs": [
+  {
+   "run": 0,
+   "warmup": true,
+   "samples_ms": [
+    729,
+    472,
+    550
+   ],
+   "stats": {
+    "n": 3,
+    "min": 472,
+    "p50": 550,
+    "p95": 729,
+    "p99": 729,
+    "max": 729,
+    "mean": 583.67
+   },
+   "extra": {
+    "docker_run_spawn_to_exit_ms": {
+     "samples": [
+      894,
+      601,
+      746
+     ],
+     "stats": {
+      "n": 3,
+      "min": 601,
+      "p50": 746,
+      "p95": 894,
+      "p99": 894,
+      "max": 894,
+      "mean": 747
+     }
+    }
+   }
+  },
+  {
+   "run": 1,
+   "warmup": false,
+   "samples_ms": [
+    658,
+    647,
+    614,
+    714,
+    655,
+    813,
+    935,
+    765,
+    797,
+    670
+   ],
+   "stats": {
+    "n": 10,
+    "min": 614,
+    "p50": 670,
+    "p95": 935,
+    "p99": 935,
+    "max": 935,
+    "mean": 726.8
+   },
+   "extra": {
+    "docker_run_spawn_to_exit_ms": {
+     "samples": [
+      814,
+      827,
+      802,
+      891,
+      844,
+      1035,
+      1119,
+      954,
+      1013,
+      827
+     ],
+     "stats": {
+      "n": 10,
+      "min": 802,
+      "p50": 844,
+      "p95": 1119,
+      "p99": 1119,
+      "max": 1119,
+      "mean": 912.6
+     }
+    }
+   }
+  },
+  {
+   "run": 2,
+   "warmup": false,
+   "samples_ms": [
+    677,
+    645,
+    689,
+    722,
+    751,
+    648,
+    624,
+    707,
+    578,
+    1986
+   ],
+   "stats": {
+    "n": 10,
+    "min": 578,
+    "p50": 677,
+    "p95": 1986,
+    "p99": 1986,
+    "max": 1986,
+    "mean": 802.7
+   },
+   "extra": {
+    "docker_run_spawn_to_exit_ms": {
+     "samples": [
+      842,
+      837,
+      871,
+      1011,
+      914,
+      804,
+      809,
+      886,
+      736,
+      2224
+     ],
+     "stats": {
+      "n": 10,
+      "min": 736,
+      "p50": 842,
+      "p95": 2224,
+      "p99": 2224,
+      "max": 2224,
+      "mean": 993.4
+     }
+    }
+   }
+  },
+  {
+   "run": 3,
+   "warmup": false,
+   "samples_ms": [
+    471,
+    557,
+    570,
+    560,
+    534,
+    1224,
+    391,
+    382,
+    439,
+    446
+   ],
+   "stats": {
+    "n": 10,
+    "min": 382,
+    "p50": 471,
+    "p95": 1224,
+    "p99": 1224,
+    "max": 1224,
+    "mean": 557.4
+   },
+   "extra": {
+    "docker_run_spawn_to_exit_ms": {
+     "samples": [
+      595,
+      710,
+      790,
+      717,
+      713,
+      1395,
+      504,
+      547,
+      581,
+      609
+     ],
+     "stats": {
+      "n": 10,
+      "min": 504,
+      "p50": 609,
+      "p95": 1395,
+      "p99": 1395,
+      "max": 1395,
+      "mean": 716.1
+     }
+    }
+   }
+  }
+ ],
+ "summary": {
+  "median_run": 1,
+  "median_stats": {
+   "n": 10,
+   "min": 614,
+   "p50": 670,
+   "p95": 935,
+   "p99": 935,
+   "max": 935,
+   "mean": 726.8
+  },
+  "spread": {
+   "p50": {
+    "min": 471,
+    "max": 677
+   },
+   "p95": {
+    "min": 935,
+    "max": 1986
+   },
+   "p99": {
+    "min": 935,
+    "max": 1986
+   }
+  }
+ },
+ "notes": []
+}

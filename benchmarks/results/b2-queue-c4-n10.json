@@ -1,0 +1,424 @@
+{
+ "name": "b2-queue-c4-n10",
+ "title": "Enqueue to container start: 10 concurrent submissions, WORKER_CONCURRENCY=4",
+ "timestamp": "2026-11-24T11:03:22.215Z",
+ "git": {
+  "commit": null,
+  "commit_note": "branch main has no commits yet; numbers come from the uncommitted working tree",
+  "last_pushed_commit": "652296a6ff2656d1765588be5606f409a44ce3c9",
+  "uncommitted_paths": 258,
+  "source_digest": "844b768956132241",
+  "source_digest_dirs": [
+   "services/api/src",
+   "services/worker/src",
+   "benchmarks/queue",
+   "benchmarks/lib"
+  ]
+ },
+ "environment": {
+  "os": "Windows_NT 10.0.26200 (win32 x64)",
+  "cpu": "Intel(R) Core(TM) Ultra 5 125H",
+  "logical_cpus": 18,
+  "ram_gib": 15.4,
+  "node": "v22.15.1",
+  "docker": "client 28.1.1 / server 28.1.1 (linux/amd64)",
+  "docker_desktop_note": "Docker Desktop on Windows: containers run in the WSL2 VM; Redis/Postgres/Qdrant and sandboxes cross the Windows<->VM boundary",
+  "load_generator_shares_machine": true,
+  "memory_at_start": {
+   "available_mib": 538,
+   "committed_gib": 26.3,
+   "commit_limit_gib": 28.6,
+   "pages_per_sec": 17
+  }
+ },
+ "conditions": {
+  "worker_concurrency": 4,
+  "concurrent_submissions": 10,
+  "submission": "Promise.all of POST /execution, each from a different test user, then POST /execution/:jobId/ready",
+  "program": "javascript: console.log(\"b2\") in codesync-sandbox-node",
+  "max_queue_length": 50,
+  "rate_limit": "EXECUTION_RATE_PER_MIN default (10/min per user); users rotate over 300 test users",
+  "sandbox_flags": "unchanged: --network none --read-only --cap-drop ALL --pids-limit 64 --memory 256m --cpus 0.5 ...",
+  "docker": "Docker Desktop on Windows (WSL2 VM): every docker run goes CLI -> named pipe -> VM",
+  "bullmq_workers_on_queue": 1,
+  "samples_ms_is": "enqueue_to_container_start_ms = docker run spawned - BullMQ job.timestamp, accepted jobs only"
+ },
+ "protocol": "1 warm-up batch + 3 measured batches; queue drained before each batch",
+ "runs": [
+  {
+   "run": 0,
+   "warmup": true,
+   "samples_ms": [
+    278,
+    259,
+    263,
+    208,
+    3607,
+    3887,
+    1675,
+    1627,
+    1382,
+    1723
+   ],
+   "stats": {
+    "n": 10,
+    "min": 208,
+    "p50": 1382,
+    "p95": 3887,
+    "p99": 3887,
+    "max": 3887,
+    "mean": 1490.9
+   },
+   "extra": {
+    "submitted": 10,
+    "http_status_counts": {
+     "200": 10
+    },
+    "http_429": 0,
+    "http_503": 0,
+    "jobs_with_timing": 10,
+    "jobs_without_container_start": 0,
+    "jobs_never_finished": 0,
+    "ready_signal_timeouts": 0,
+    "bullmq_job_states": {
+     "completed": 9,
+     "active": 1
+    },
+    "queue_wait_ms": {
+     "samples": [
+      5,
+      24,
+      4,
+      25,
+      3190,
+      3550,
+      1418,
+      1381,
+      1089,
+      1459
+     ],
+     "stats": {
+      "n": 10,
+      "min": 4,
+      "p50": 1089,
+      "p95": 3550,
+      "p99": 3550,
+      "max": 3550,
+      "mean": 1214.5
+     }
+    },
+    "enqueue_to_first_output_ms": {
+     "samples": [
+      966,
+      900,
+      905,
+      802,
+      4761,
+      4902,
+      3071,
+      2844,
+      2487,
+      3102
+     ],
+     "stats": {
+      "n": 10,
+      "min": 802,
+      "p50": 2487,
+      "p95": 4902,
+      "p99": 4902,
+      "max": 4902,
+      "mean": 2474
+     }
+    }
+   }
+  },
+  {
+   "run": 1,
+   "warmup": false,
+   "samples_ms": [
+    1961,
+    265,
+    4026,
+    185,
+    247,
+    223,
+    2078,
+    3840,
+    1818,
+    2138
+   ],
+   "stats": {
+    "n": 10,
+    "min": 185,
+    "p50": 1818,
+    "p95": 4026,
+    "p99": 4026,
+    "max": 4026,
+    "mean": 1678.1
+   },
+   "extra": {
+    "submitted": 10,
+    "http_status_counts": {
+     "200": 10
+    },
+    "http_429": 0,
+    "http_503": 0,
+    "jobs_with_timing": 10,
+    "jobs_without_container_start": 0,
+    "jobs_never_finished": 0,
+    "ready_signal_timeouts": 0,
+    "bullmq_job_states": {
+     "completed": 9,
+     "active": 1
+    },
+    "queue_wait_ms": {
+     "samples": [
+      1692,
+      22,
+      3715,
+      4,
+      23,
+      19,
+      1846,
+      3508,
+      1574,
+      1883
+     ],
+     "stats": {
+      "n": 10,
+      "min": 4,
+      "p50": 1574,
+      "p95": 3715,
+      "p99": 3715,
+      "max": 3715,
+      "mean": 1428.6
+     }
+    },
+    "enqueue_to_first_output_ms": {
+     "samples": [
+      3114,
+      1258,
+      5077,
+      1109,
+      1246,
+      1165,
+      3251,
+      5005,
+      2864,
+      3385
+     ],
+     "stats": {
+      "n": 10,
+      "min": 1109,
+      "p50": 2864,
+      "p95": 5077,
+      "p99": 5077,
+      "max": 5077,
+      "mean": 2747.4
+     }
+    }
+   }
+  },
+  {
+   "run": 2,
+   "warmup": false,
+   "samples_ms": [
+    261,
+    296,
+    330,
+    2415,
+    2576,
+    2779,
+    2671,
+    352,
+    5073,
+    4981
+   ],
+   "stats": {
+    "n": 10,
+    "min": 261,
+    "p50": 2415,
+    "p95": 5073,
+    "p99": 5073,
+    "max": 5073,
+    "mean": 2173.4
+   },
+   "extra": {
+    "submitted": 10,
+    "http_status_counts": {
+     "200": 10
+    },
+    "http_429": 0,
+    "http_503": 0,
+    "jobs_with_timing": 10,
+    "jobs_without_container_start": 0,
+    "jobs_never_finished": 0,
+    "ready_signal_timeouts": 0,
+    "bullmq_job_states": {
+     "completed": 8,
+     "active": 2
+    },
+    "queue_wait_ms": {
+     "samples": [
+      5,
+      32,
+      29,
+      2018,
+      2124,
+      2374,
+      2256,
+      31,
+      4710,
+      4629
+     ],
+     "stats": {
+      "n": 10,
+      "min": 5,
+      "p50": 2018,
+      "p95": 4710,
+      "p99": 4710,
+      "max": 4710,
+      "mean": 1820.8
+     }
+    },
+    "enqueue_to_first_output_ms": {
+     "samples": [
+      1375,
+      1508,
+      1528,
+      3920,
+      3945,
+      4159,
+      4091,
+      1556,
+      6265,
+      6261
+     ],
+     "stats": {
+      "n": 10,
+      "min": 1375,
+      "p50": 3920,
+      "p95": 6265,
+      "p99": 6265,
+      "max": 6265,
+      "mean": 3460.8
+     }
+    }
+   }
+  },
+  {
+   "run": 3,
+   "warmup": false,
+   "samples_ms": [
+    328,
+    359,
+    379,
+    293,
+    2101,
+    2338,
+    2476,
+    2557,
+    4311,
+    4655
+   ],
+   "stats": {
+    "n": 10,
+    "min": 293,
+    "p50": 2101,
+    "p95": 4655,
+    "p99": 4655,
+    "max": 4655,
+    "mean": 1979.7
+   },
+   "extra": {
+    "submitted": 10,
+    "http_status_counts": {
+     "200": 10
+    },
+    "http_429": 0,
+    "http_503": 0,
+    "jobs_with_timing": 10,
+    "jobs_without_container_start": 0,
+    "jobs_never_finished": 0,
+    "ready_signal_timeouts": 0,
+    "bullmq_job_states": {
+     "completed": 9,
+     "active": 1
+    },
+    "queue_wait_ms": {
+     "samples": [
+      35,
+      36,
+      38,
+      4,
+      1768,
+      2003,
+      2135,
+      2240,
+      3960,
+      4361
+     ],
+     "stats": {
+      "n": 10,
+      "min": 4,
+      "p50": 1768,
+      "p95": 4361,
+      "p99": 4361,
+      "max": 4361,
+      "mean": 1658
+     }
+    },
+    "enqueue_to_first_output_ms": {
+     "samples": [
+      1336,
+      1431,
+      1426,
+      1240,
+      3337,
+      3720,
+      3776,
+      3825,
+      5525,
+      5663
+     ],
+     "stats": {
+      "n": 10,
+      "min": 1240,
+      "p50": 3337,
+      "p95": 5663,
+      "p99": 5663,
+      "max": 5663,
+      "mean": 3127.9
+     }
+    }
+   }
+  }
+ ],
+ "summary": {
+  "median_run": 3,
+  "median_stats": {
+   "n": 10,
+   "min": 293,
+   "p50": 2101,
+   "p95": 4655,
+   "p99": 4655,
+   "max": 4655,
+   "mean": 1979.7
+  },
+  "spread": {
+   "p50": {
+    "min": 1818,
+    "max": 2415
+   },
+   "p95": {
+    "min": 4026,
+    "max": 5073
+   },
+   "p99": {
+    "min": 4026,
+    "max": 5073
+   }
+  }
+ },
+ "notes": []
+}
