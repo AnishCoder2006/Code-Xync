@@ -7,11 +7,13 @@ if (process.env.NODE_ENV === "test" && process.env.CLERK_SECRET_KEY?.startsWith(
 
 import express from "express";
 import { loggerMiddleware, logger } from "./middleware/logger";
+import { corsMiddleware } from "./middleware/cors";
 import roomsRouter from "./routes/rooms";
 import executionRouter from "./routes/execution";
 import aiRouter from "./routes/ai";
 
 const app = express();
+app.use(corsMiddleware());
 app.use(express.json());
 app.use(loggerMiddleware);
 

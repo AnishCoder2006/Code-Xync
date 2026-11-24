@@ -5,7 +5,8 @@
  *
  * 1. `next build` with NEXT_PUBLIC_E2E unset into apps/web/.next (the normal output dir).
  * 2. Build-time check: no file in the build output contains the E2E page's code
- *    (the "test-token-" string or the E2EEditorPage component).
+ *    (the "test-token-" string or the E2EEditorPage component) or the test-auth
+ *    implementation (src/e2e/testAuth.tsx), and the _app chunk carries Clerk.
  * 3. `next start`: GET /e2e/editor -> 404 (not 200, not a sign-in redirect).
  * 4. Restart the SAME build with NEXT_PUBLIC_E2E=1 in the runtime env: still 404,
  *    because the guard is resolved at build time.
@@ -76,19 +77,29 @@ async function main() {
 
   execSync("npm run build", { cwd: WEB_DIR, env, stdio: "inherit" });
 
+  // E2E page code + the test-auth implementation (src/e2e/testAuth.tsx: storage key, form id, marker).
+  const MARKERS = ["test-token-", "E2EEditorPage", "e2e-connects", "CODESYNC_TEST_AUTH", "codesync:e2e-user", "test-sign-in"];
   const offenders = filesUnder(DIST).filter((f) => {
     const s = fs.readFileSync(f, "utf8");
-    return s.includes("test-token-") || s.includes("E2EEditorPage") || s.includes("e2e-connects");
+    return MARKERS.some((m) => s.includes(m));
   });
   console.log(`\n   Build-time check: scanned ${filesUnder(DIST).length} output files in apps/web/.next (excluding cache/)`);
-  console.log(`   Files containing E2E page code ("test-token-", "E2EEditorPage", "e2e-connects"): ${offenders.length}`);
+  console.log(`   Files containing E2E page / test-auth code (${MARKERS.map((m) => JSON.stringify(m)).join(", ")}): ${offenders.length}`);
   offenders.forEach((f) => console.log("     - " + path.relative(WEB_DIR, f)));
+  // The production build must carry the real Clerk auth instead.
+  const pagesDir = path.join(DIST, "static/chunks/pages");
+  const clerkInApp = fs
+    .readdirSync(pagesDir)
+    .filter((f) => f.startsWith("_app-"))
+    .some((f) => fs.readFileSync(path.join(pagesDir, f), "utf8").includes("clerk"));
+  console.log(`   Clerk auth present in the production _app chunk: ${clerkInApp}`);
 
   const statusProd = await startAndGet(env, "prod build, NEXT_PUBLIC_E2E unset");
   const statusRuntimeFlag = await startAndGet({ ...env, NEXT_PUBLIC_E2E: "1" }, "same build, NEXT_PUBLIC_E2E=1 at runtime only");
 
   const checks: Array<[boolean, string]> = [
-    [offenders.length === 0, "no E2E page code in the production build output"],
+    [offenders.length === 0, "no E2E page or test-auth code in the production build output"],
+    [clerkInApp, "production build uses the real Clerk auth"],
     [statusProd === 404, "/e2e/editor returns 404 on the production build"],
     [statusRuntimeFlag === 404, "setting NEXT_PUBLIC_E2E=1 at runtime does not enable it (build-time guard)"],
   ];

@@ -1,0 +1,228 @@
+{
+ "name": "ui-product-suite",
+ "title": "Product UI suite (plan Part 2), consecutive runs (flakiness check)",
+ "timestamp": "2026-11-24T13:53:43.261Z",
+ "git": {
+  "commit": "7c8c52825b17488603b8372884bed5c516f9d30e",
+  "commit_note": null,
+  "last_pushed_commit": "7c8c52825b17488603b8372884bed5c516f9d30e",
+  "uncommitted_paths": 62,
+  "source_digest": "fcf95cf857436156",
+  "source_digest_dirs": [
+   "tests/playwright",
+   "apps/web/src",
+   "services/api/src",
+   "services/sync/src",
+   "services/ai/app"
+  ]
+ },
+ "environment": {
+  "os": "Windows_NT 10.0.26200 (win32 x64)",
+  "cpu": "Intel(R) Core(TM) Ultra 5 125H",
+  "logical_cpus": 18,
+  "ram_gib": 15.4,
+  "node": "v22.15.1",
+  "docker": "client 28.1.1 / server 28.1.1 (linux/amd64)",
+  "docker_desktop_note": "Docker Desktop on Windows: containers run in the WSL2 VM; Redis/Postgres/Qdrant and sandboxes cross the Windows<->VM boundary",
+  "load_generator_shares_machine": true,
+  "memory_at_start": {
+   "available_mib": 2694,
+   "committed_gib": 24.3,
+   "commit_limit_gib": 28.6,
+   "pages_per_sec": 0
+  }
+ },
+ "conditions": {
+  "what": "tests/playwright ui-*.spec.ts: Chromium on the real pages (/, /rooms, /room/[id]) of a NEXT_PUBLIC_E2E=1 build (test auth swapped in at build time)",
+  "topology": "2 sync nodes + Node LB, API (NODE_ENV=test, CORS), AI service (LLM_PROVIDER=mock_scenario), worker with the hardened Docker sandbox",
+  "retries": 0,
+  "workers": 1,
+  "consecutive_runs": 3
+ },
+ "protocol": "suite run back to back; no warm-up (pass/fail check)",
+ "runs": [
+  {
+   "run": 1,
+   "exit_code": 0,
+   "total": 8,
+   "passed": 8,
+   "failed": 0,
+   "flaky": 0,
+   "skipped": 0,
+   "duration_s": 68.3,
+   "tests": [
+    {
+     "title": "ui-ai.spec.ts › progress steps in order, diff, Accept updates both editors on two nodes",
+     "status": "expected",
+     "duration_ms": 7976
+    },
+    {
+     "title": "ui-ai.spec.ts › stale patch: file edited while the AI worked -> regenerate message",
+     "status": "expected",
+     "duration_ms": 8719
+    },
+    {
+     "title": "ui-dashboard.spec.ts › signed-out: landing page, and /rooms redirects to sign-in",
+     "status": "expected",
+     "duration_ms": 653
+    },
+    {
+     "title": "ui-dashboard.spec.ts › create a room, see it listed, second user joins with the passcode",
+     "status": "expected",
+     "duration_ms": 3842
+    },
+    {
+     "title": "ui-presence.spec.ts › avatars and remote cursor between two browsers; avatar leaves with the user",
+     "status": "expected",
+     "duration_ms": 17802
+    },
+    {
+     "title": "ui-run.spec.ts › Run shows the program output and exit code",
+     "status": "expected",
+     "duration_ms": 3705
+    },
+    {
+     "title": "ui-run.spec.ts › rate limited: 429 shows when to retry and blocks the button",
+     "status": "expected",
+     "duration_ms": 2817
+    },
+    {
+     "title": "ui-viewer.spec.ts › viewer is read-only; Run and AI disabled with a reason",
+     "status": "expected",
+     "duration_ms": 7260
+    }
+   ]
+  },
+  {
+   "run": 2,
+   "exit_code": 0,
+   "total": 8,
+   "passed": 8,
+   "failed": 0,
+   "flaky": 0,
+   "skipped": 0,
+   "duration_s": 71.4,
+   "tests": [
+    {
+     "title": "ui-ai.spec.ts › progress steps in order, diff, Accept updates both editors on two nodes",
+     "status": "expected",
+     "duration_ms": 7882
+    },
+    {
+     "title": "ui-ai.spec.ts › stale patch: file edited while the AI worked -> regenerate message",
+     "status": "expected",
+     "duration_ms": 9104
+    },
+    {
+     "title": "ui-dashboard.spec.ts › signed-out: landing page, and /rooms redirects to sign-in",
+     "status": "expected",
+     "duration_ms": 632
+    },
+    {
+     "title": "ui-dashboard.spec.ts › create a room, see it listed, second user joins with the passcode",
+     "status": "expected",
+     "duration_ms": 4454
+    },
+    {
+     "title": "ui-presence.spec.ts › avatars and remote cursor between two browsers; avatar leaves with the user",
+     "status": "expected",
+     "duration_ms": 20467
+    },
+    {
+     "title": "ui-run.spec.ts › Run shows the program output and exit code",
+     "status": "expected",
+     "duration_ms": 4246
+    },
+    {
+     "title": "ui-run.spec.ts › rate limited: 429 shows when to retry and blocks the button",
+     "status": "expected",
+     "duration_ms": 2371
+    },
+    {
+     "title": "ui-viewer.spec.ts › viewer is read-only; Run and AI disabled with a reason",
+     "status": "expected",
+     "duration_ms": 7244
+    }
+   ]
+  },
+  {
+   "run": 3,
+   "exit_code": 0,
+   "total": 8,
+   "passed": 8,
+   "failed": 0,
+   "flaky": 0,
+   "skipped": 0,
+   "duration_s": 76.1,
+   "tests": [
+    {
+     "title": "ui-ai.spec.ts › progress steps in order, diff, Accept updates both editors on two nodes",
+     "status": "expected",
+     "duration_ms": 7995
+    },
+    {
+     "title": "ui-ai.spec.ts › stale patch: file edited while the AI worked -> regenerate message",
+     "status": "expected",
+     "duration_ms": 9887
+    },
+    {
+     "title": "ui-dashboard.spec.ts › signed-out: landing page, and /rooms redirects to sign-in",
+     "status": "expected",
+     "duration_ms": 985
+    },
+    {
+     "title": "ui-dashboard.spec.ts › create a room, see it listed, second user joins with the passcode",
+     "status": "expected",
+     "duration_ms": 6394
+    },
+    {
+     "title": "ui-presence.spec.ts › avatars and remote cursor between two browsers; avatar leaves with the user",
+     "status": "expected",
+     "duration_ms": 18153
+    },
+    {
+     "title": "ui-run.spec.ts › Run shows the program output and exit code",
+     "status": "expected",
+     "duration_ms": 4909
+    },
+    {
+     "title": "ui-run.spec.ts › rate limited: 429 shows when to retry and blocks the button",
+     "status": "expected",
+     "duration_ms": 2885
+    },
+    {
+     "title": "ui-viewer.spec.ts › viewer is read-only; Run and AI disabled with a reason",
+     "status": "expected",
+     "duration_ms": 8611
+    }
+   ]
+  }
+ ],
+ "summary": {
+  "all_passed": true,
+  "runs": [
+   {
+    "run": 1,
+    "exit_code": 0,
+    "passed": 8,
+    "failed": 0,
+    "flaky": 0
+   },
+   {
+    "run": 2,
+    "exit_code": 0,
+    "passed": 8,
+    "failed": 0,
+    "flaky": 0
+   },
+   {
+    "run": 3,
+    "exit_code": 0,
+    "passed": 8,
+    "failed": 0,
+    "flaky": 0
+   }
+  ]
+ },
+ "notes": []
+}

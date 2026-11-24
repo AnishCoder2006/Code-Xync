@@ -13,7 +13,14 @@ module.exports = {
   distDir: process.env.NEXT_DIST_DIR || ".next",
   // Optional: fewer build workers on memory-constrained machines (NEXT_BUILD_CPUS=1).
   ...(process.env.NEXT_BUILD_CPUS ? { experimental: { cpus: Number(process.env.NEXT_BUILD_CPUS) } } : {}),
-  webpack: (config) => {
+  webpack: (config, { webpack }) => {
+    if (E2E_BUILD) {
+      // Test builds: swap Clerk auth for the test-token implementation. Production
+      // builds never see src/e2e/testAuth.tsx (A4 scans the output for its marker).
+      config.plugins.push(
+        new webpack.NormalModuleReplacementPlugin(/[\\/]clerkAuth$/, path.resolve(__dirname, "src/e2e/testAuth.tsx"))
+      );
+    }
     config.resolve.alias = {
       ...(config.resolve.alias || {}),
       // y-monaco imports Monaco's ESM API; point it at the single AMD instance the

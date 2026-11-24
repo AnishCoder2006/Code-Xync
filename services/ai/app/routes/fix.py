@@ -31,6 +31,7 @@ class FixRequest(BaseModel):
     base_version: str = "latest"           # Yjs state vector (base64); "latest" = Phase 2 compat
     test_command: List[str] = Field(default_factory=list)  # e.g. ["pytest", "tests/test_foo.py"]
     extra_files: Optional[dict] = Field(default_factory=dict)  # extra files mounted alongside target file
+    progress_id: Optional[str] = None      # UUID; steps are published to Redis ai:progress:<id> (SSE via API)
 
 
 class FixResponse(BaseModel):
@@ -78,6 +79,7 @@ def fix_code(req: FixRequest) -> FixResponse:
             file_path=req.file_path,
             test_command=req.test_command,
             extra_files=req.extra_files,
+            progress_id=req.progress_id,
         )
     except Exception as exc:
         logger.exception("run_agent raised unexpectedly: %s", exc)

@@ -43,6 +43,7 @@ from langgraph.graph import StateGraph, END
 from app.agent.edit_applier import apply_function_edit, ApplyResult
 from app.agent.critic import evaluate_sandbox_result
 from app.agent.llm_provider import get_llm_provider, BaseLLMProvider, LLMResponse, wrap_untrusted_code
+from app.agent.progress import ProgressPublisher
 
 logger = logging.getLogger(__name__)
 
@@ -70,6 +71,7 @@ class AgentState(TypedDict, total=False):
     test_command: List[str]  # optional test command to run after edit
     extra_files: Optional[Dict[str, str]]  # optional extra files mounted alongside target file
     llm_provider: Optional[Any]   # injected for tests; None = use get_llm_provider()
+    progress: Optional[Any]       # ProgressPublisher; emits steps for the UI (no-op without an id)
 
     # ── Working state ───────────────────────────────────────────────────────
     working_content: str     # copy of base_text that the agent edits (NEVER the live doc)
@@ -257,8 +259,15 @@ def _call_sandbox(
 # Graph nodes
 # ---------------------------------------------------------------------------
 
+def _emit(state: AgentState, step: str, **fields: Any) -> None:
+    progress = state.get("progress")
+    if progress is not None:
+        progress.emit(step, **fields)
+
+
 def node_context_builder(state: AgentState) -> AgentState:
     """Initialise working state from the snapshot."""
+    _emit(state, "context")
     return {
         "working_content": state["base_text"],
         "retry_count": 0,
@@ -290,6 +299,7 @@ def node_generate_fix(state: AgentState) -> AgentState:
 
     provider: BaseLLMProvider = state.get("llm_provider") or get_llm_provider()
     retry_count = state.get("retry_count", 0)
+    _emit(state, "generating", attempt=retry_count + 1)
 
     messages = _build_initial_messages(
         prompt=state["prompt"],
@@ -368,6 +378,7 @@ def node_apply_edit(state: AgentState) -> AgentState:
     if state.get("critic_result") and not state["critic_result"].get("passed"):
         return {}
 
+    _emit(state, "applying", attempt=state.get("retry_count", 0) + 1)
     try:
         result: ApplyResult = apply_function_edit(
             file_content=state.get("working_content", state["base_text"]),
@@ -407,6 +418,7 @@ def node_sandbox_test(state: AgentState) -> AgentState:
     if state.get("critic_result") is not None:
         return {}
 
+    _emit(state, "testing", attempt=state.get("retry_count", 0) + 1)
     try:
         result = _call_sandbox(
             working_content=state["working_content"],
@@ -471,6 +483,15 @@ def should_retry_or_finish(state: AgentState) -> Literal["retry", "finish"]:
 
 def node_retry(state: AgentState) -> AgentState:
     """Increment retry counter and reset working content for next attempt."""
+    critic = state.get("critic_result") or {}
+    _emit(
+        state,
+        "retrying",
+        retry=state.get("retry_count", 0) + 1,
+        attempt=state.get("retry_count", 0) + 2,
+        reason=critic.get("reason"),
+        message=(state.get("error_feedback") or critic.get("error_feedback") or "")[:300] or None,
+    )
     return {
         "retry_count": state.get("retry_count", 0) + 1,
         # Reset working_content to base for clean re-apply
@@ -584,6 +605,7 @@ def run_agent(
     test_command: Optional[List[str]] = None,
     llm_provider=None,
     extra_files: Optional[Dict[str, str]] = None,
+    progress_id: Optional[str] = None,
 ) -> Dict[str, Any]:
     """
     Entry point called by the /fix route.
@@ -602,6 +624,7 @@ def run_agent(
     """
     # Make a fresh copy of base_text to guarantee we never mutate the caller's string
     base_text_copy = str(base_text)
+    progress = ProgressPublisher(progress_id)
 
     initial_state: AgentState = {
         "room_id": room_id,
@@ -613,6 +636,7 @@ def run_agent(
         "test_command": test_command or [],
         "extra_files": extra_files or {},
         "llm_provider": llm_provider,
+        "progress": progress,
         # Will be initialised by context_builder node
         "working_content": base_text_copy,
         "retry_count": 0,
@@ -637,7 +661,20 @@ def run_agent(
     }
 
     graph = get_graph()
-    final_state = graph.invoke(initial_state)
+    try:
+        final_state = graph.invoke(initial_state)
+    except Exception as exc:
+        progress.emit("failed", status="error", message=f"Agent error: {exc}"[:300])
+        raise
+
+    final_status = final_state.get("final_status") or "error"
+    progress.emit(
+        "done" if final_status in ("verified", "unverified_no_test") else "failed",
+        status=final_status,
+        llm_calls=final_state.get("llm_calls", 0),
+        total_cost_usd=final_state.get("total_cost_usd", 0.0),
+        message=(final_state.get("error_message") or "")[:300] or None,
+    )
 
     return {
         "status": final_state.get("final_status") or "error",

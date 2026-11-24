@@ -19,3 +19,7 @@ apps/web/.next-e2e/
 
 # Playwright run artifacts
 test-results/
+
+# Playwright setup pid files
+tests/playwright/.pw-pids
+tests/playwright/.pw-ui-pids

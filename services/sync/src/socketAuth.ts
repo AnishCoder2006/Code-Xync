@@ -10,7 +10,7 @@ const clerk = createClerkClient({
 
 export const authenticateSocket = async (
   req: IncomingMessage
-): Promise<{ userId: string; roomId: string }> => {
+): Promise<{ userId: string; roomId: string; role: "OWNER" | "EDITOR" | "VIEWER" }> => {
   const parsedUrl = urlModule.parse(req.url || "", true);
   const token = parsedUrl.query.token as string;
   const roomId = parsedUrl.query.roomId as string;
@@ -50,7 +50,7 @@ export const authenticateSocket = async (
       throw new Error("User is not a member of the room");
     }
 
-    return { userId, roomId };
+    return { userId, roomId, role: member.role };
   } catch (err) {
     throw new Error("Authentication failed");
   }

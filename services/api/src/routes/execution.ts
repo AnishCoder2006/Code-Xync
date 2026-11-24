@@ -2,8 +2,7 @@ import { Router, Request, Response } from "express";
 import { Queue } from "bullmq";
 import Redis from "ioredis";
 import { v4 as uuidv4 } from "uuid";
-import { requireAuth } from "@clerk/express";
-import { attachUser } from "../middleware/auth";
+import { authenticate } from "../middleware/auth";
 import { logger } from "../middleware/logger";
 import { prisma } from "../lib/prisma";
 import { executionRateLimiter, sandboxRateLimiter } from "../middleware/rateLimit";
@@ -115,15 +114,7 @@ router.post("/sandbox", verifyInternalAuth, sandboxRateLimiter, async (req: Requ
   }
 });
 
-if (process.env.NODE_ENV === "test") {
-  router.use((req: Request, res: Response, next: import("express").NextFunction) => {
-    if (req.user) return next();
-    return requireAuth()(req, res, () => attachUser(req, res, next));
-  });
-} else {
-  router.use(requireAuth());
-  router.use(attachUser);
-}
+router.use(authenticate);
 
 router.post("/", executionRateLimiter, async (req: Request, res: Response) => {
   try {

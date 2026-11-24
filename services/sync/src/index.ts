@@ -32,6 +32,7 @@ import * as decoding from "lib0/decoding";
 import Redis from "ioredis";
 import * as urlModule from "url";
 import { authenticateSocket } from "./socketAuth";
+import { wholeLineOccurrences } from "./rangeMatch";
 import { NODE_ID, PORT, log, logErr } from "./node";
 import {
   initRelay,
@@ -60,6 +61,10 @@ const startedAt = Date.now();
 
 const MESSAGE_SYNC = 0;
 const MESSAGE_AWARENESS = 1;
+// y-protocols/sync sub-types: step1 = request (read), step2 / update = write.
+const SYNC_STEP1 = 0;
+/** Document writes dropped because the sender's role is VIEWER (plan step 2.5). */
+const viewerStats = { droppedUpdates: 0 };
 
 /** Origin used when a disconnecting client's awareness is removed (published). */
 const ORIGIN_CLIENT_CLOSE = "client-close";
@@ -247,6 +252,7 @@ const server = http.createServer(async (req, res) => {
       uptimeMs: Date.now() - startedAt,
       relay: relayStats,
       persistence: persistStats,
+      viewer: viewerStats,
     };
     if (authed) {
       const roomDetails: Record<string, { clients: number }> = {};
@@ -296,7 +302,8 @@ const server = http.createServer(async (req, res) => {
       room.doc.transact(() => {
         const currentText = ytext.toString();
         if (oldRangeText) {
-          const occurrences = currentText.split(oldRangeText).length - 1;
+          const matches = wholeLineOccurrences(currentText, oldRangeText);
+          const occurrences = matches.length;
           if (occurrences === 0) {
             txStatus.error = { status: 409, message: "Target code range not found in current document" };
             return;
@@ -308,7 +315,7 @@ const server = http.createServer(async (req, res) => {
             };
             return;
           }
-          const actualOffset = currentText.indexOf(oldRangeText);
+          const actualOffset = matches[0];
           ytext.delete(actualOffset, oldRangeText.length);
           if (newCode && newCode.length > 0) ytext.insert(actualOffset, newCode);
         } else {
@@ -395,8 +402,9 @@ function handleTerminal(ws: WebSocket, roomId: string, jobId: string | undefined
   ws.on("error", cleanup);
 }
 
-wss.on("connection", (ws: WebSocket, request: http.IncomingMessage, clientInfo: { userId: string; roomId: string }) => {
-  const { roomId, userId } = clientInfo;
+wss.on("connection", (ws: WebSocket, request: http.IncomingMessage, clientInfo: { userId: string; roomId: string; role: string }) => {
+  const { roomId, userId, role } = clientInfo;
+  const readOnly = role === "VIEWER";
   const parsedUrl = urlModule.parse(request.url || "", true);
   if (parsedUrl.query.mode === "terminal") {
     handleTerminal(ws, roomId, parsedUrl.query.jobId as string | undefined);
@@ -417,6 +425,12 @@ wss.on("connection", (ws: WebSocket, request: http.IncomingMessage, clientInfo: 
       const decoder = decoding.createDecoder(data);
       const msgType = decoding.readVarUint(decoder);
       if (msgType === MESSAGE_SYNC) {
+        // Viewers may read (step1 -> we answer with step2) but never write: their
+        // step2/update frames are dropped here, whatever the client UI does.
+        if (readOnly && decoding.peekVarUint(decoder) !== SYNC_STEP1) {
+          viewerStats.droppedUpdates++;
+          return;
+        }
         const encoder = encoding.createEncoder();
         encoding.writeVarUint(encoder, MESSAGE_SYNC);
         // Applies step2/update frames with `ws` as origin -> onDocUpdate relays them.

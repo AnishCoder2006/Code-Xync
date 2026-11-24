@@ -5,7 +5,9 @@
  *   cd tests/playwright && NODE_ENV=test npx tsx run-flakiness.ts [--runs 3]
  *   npx tsx run-flakiness.ts --collect <dir>   # ingest runs already made: <dir>/browser-results-run<i>.json
  *                                              # and <dir>/browser-latency-run<i>.json
- * retries are 0 in playwright.config.ts, so every failure is visible.
+ *   NODE_ENV=test npx tsx run-flakiness.ts --ui [--runs 3]   # product UI suite (playwright.ui.config.ts)
+ *                                              # -> benchmarks/results/ui-product-suite.json
+ * retries are 0 in both configs, so every failure is visible.
  */
 import { execSync } from "child_process";
 import fs from "fs";
@@ -17,6 +19,7 @@ const runsArg = argv.indexOf("--runs");
 const N = runsArg > 0 ? Number(argv[runsArg + 1]) : 3;
 const collectArg = argv.indexOf("--collect");
 const HERE = __dirname;
+const UI = argv.includes("--ui");
 
 interface SuiteRun {
   run: number;
@@ -79,11 +82,16 @@ function main() {
     for (let i = 1; i <= N; i++) {
       let code = 0;
       try {
-        execSync("npx playwright test", { cwd: HERE, stdio: "inherit", env: { ...process.env, NODE_ENV: "test" } });
+        execSync(UI ? "npx playwright test -c playwright.ui.config.ts" : "npx playwright test", {
+          cwd: HERE,
+          stdio: "inherit",
+          env: { ...process.env, NODE_ENV: "test" },
+        });
       } catch (e: any) {
         code = e.status ?? 1;
       }
-      suiteRuns.push(parseReport(path.join(HERE, "test-results/browser-results.json"), i, code));
+      suiteRuns.push(parseReport(path.join(HERE, UI ? "test-results/ui-results.json" : "test-results/browser-results.json"), i, code));
+      if (UI) continue; // the UI suite has no latency spec
       const lf = path.join(HERE, "test-results/browser-latency.json");
       if (fs.existsSync(lf)) {
         const l = JSON.parse(fs.readFileSync(lf, "utf8"));
@@ -92,6 +100,7 @@ function main() {
       }
     }
   }
+  if (UI) return writeUi(suiteRuns);
   const file = writeResult("a2-browser-suite", {
     title: "Real-browser sync suite, consecutive runs (flakiness check)",
     sourceDirs: ["tests/playwright", "apps/web/src", "services/sync/src"],
@@ -113,6 +122,31 @@ function main() {
   const doc = JSON.parse(fs.readFileSync(file, "utf8"));
   doc.runs = suiteRuns;
   doc.latency = latRuns.length ? { conditions: latConditions, runs: latRuns } : null;
+  fs.writeFileSync(file, JSON.stringify(doc, null, 1));
+  console.log(`wrote ${file}`);
+  for (const r of suiteRuns) console.log(`  run ${r.run}: exit=${r.exit_code} ${r.passed}/${r.total} passed, ${r.failed} failed, ${r.flaky} flaky`);
+}
+
+function writeUi(suiteRuns: SuiteRun[]) {
+  const file = writeResult("ui-product-suite", {
+    title: "Product UI suite (plan Part 2), consecutive runs (flakiness check)",
+    sourceDirs: ["tests/playwright", "apps/web/src", "services/api/src", "services/sync/src", "services/ai/app"],
+    conditions: {
+      what: "tests/playwright ui-*.spec.ts: Chromium on the real pages (/, /rooms, /room/[id]) of a NEXT_PUBLIC_E2E=1 build (test auth swapped in at build time)",
+      topology: "2 sync nodes + Node LB, API (NODE_ENV=test, CORS), AI service (LLM_PROVIDER=mock_scenario), worker with the hardened Docker sandbox",
+      retries: 0,
+      workers: 1,
+      consecutive_runs: suiteRuns.length,
+    },
+    protocol: "suite run back to back; no warm-up (pass/fail check)",
+    runs: suiteRuns.map((r) => ({ run: r.run, warmup: false, samples_ms: [], stats: stats([]), extra: r as any })),
+    summary: {
+      all_passed: suiteRuns.every((r) => r.exit_code === 0),
+      runs: suiteRuns.map((r) => ({ run: r.run, exit_code: r.exit_code, passed: r.passed, failed: r.failed, flaky: r.flaky })),
+    },
+  });
+  const doc = JSON.parse(fs.readFileSync(file, "utf8"));
+  doc.runs = suiteRuns;
   fs.writeFileSync(file, JSON.stringify(doc, null, 1));
   console.log(`wrote ${file}`);
   for (const r of suiteRuns) console.log(`  run ${r.run}: exit=${r.exit_code} ${r.passed}/${r.total} passed, ${r.failed} failed, ${r.flaky} flaky`);
