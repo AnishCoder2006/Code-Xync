@@ -13,6 +13,7 @@ import executionRouter from "./routes/execution";
 import aiRouter from "./routes/ai";
 import meRouter from "./routes/me";
 import statusRouter from "./routes/status";
+import friendsRouter from "./routes/friends";
 
 const app = express();
 app.use(corsMiddleware());
@@ -26,6 +27,7 @@ app.use("/execution", executionRouter);
 app.use("/ai", aiRouter);
 app.use("/me", meRouter);
 app.use("/status", statusRouter);
+app.use("/friends", friendsRouter);
 app.use("/search", aiRouter);
 
 const port = process.env.API_PORT ?? 4000;

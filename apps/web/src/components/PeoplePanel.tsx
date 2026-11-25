@@ -5,9 +5,10 @@
  */
 import { useEffect, useState } from "react";
 import type { WebsocketProvider } from "y-websocket";
-import { AlertCircle, Crown, LogOut, UserMinus } from "lucide-react";
+import Link from "next/link";
+import { AlertCircle, Crown, LogOut, UserMinus, UserPlus } from "lucide-react";
 import { toast } from "sonner";
-import { api, describeError, roleLabel, type GetToken, type RoomDetail } from "../lib/api";
+import { api, describeError, roleLabel, type Friend, type FriendsData, type GetToken, type RoomDetail } from "../lib/api";
 import { colorFor, initials, timeAgo } from "../lib/util";
 import { Button } from "./ui/button";
 import { Alert, Avatar, Badge } from "./ui/display";
@@ -36,6 +37,66 @@ function useOnlineIds(provider: WebsocketProvider | null) {
     return () => provider.awareness.off("change", update);
   }, [provider]);
   return ids;
+}
+
+/** Friends who aren't in this room yet, each one click away from joining it. */
+function InviteFriends({ room, getToken, onAdded }: { room: RoomDetail; getToken: GetToken; onAdded: () => void }) {
+  const [friends, setFriends] = useState<Friend[] | null>(null);
+  const [busy, setBusy] = useState<string | null>(null);
+  const [added, setAdded] = useState<Set<string>>(new Set());
+
+  useEffect(() => {
+    let live = true;
+    api<FriendsData>(getToken, "/friends")
+      .then((d) => live && setFriends(d.friends))
+      .catch(() => live && setFriends([]));
+    return () => {
+      live = false;
+    };
+  }, [getToken]);
+
+  const invite = async (f: Friend) => {
+    setBusy(f.id);
+    try {
+      await api(getToken, `/rooms/${encodeURIComponent(room.id)}/members`, { body: { userId: f.id, role: "EDITOR" } });
+      setAdded((s) => new Set(s).add(f.id));
+      toast.success(`${f.name} added as an editor`, { description: "The room is now on their Rooms page." });
+      onAdded();
+    } catch (err) {
+      toast.error(describeError(err));
+    } finally {
+      setBusy(null);
+    }
+  };
+
+  if (!friends) return null;
+  const memberIds = new Set(room.members.map((m) => m.userId));
+  const outside = friends.filter((f) => !memberIds.has(f.id) && !added.has(f.id));
+
+  return (
+    <section className="grid gap-2" data-testid="invite-friends">
+      <h3 className="flex items-center gap-1.5 text-sm font-semibold"><UserPlus className="size-4 text-brand" />Invite friends</h3>
+      {friends.length === 0 ? (
+        <p className="text-sm text-muted-foreground">
+          No friends yet. <Link href="/friends" className="font-medium text-foreground underline-offset-4 hover:underline">Share your invite link</Link> to add some.
+        </p>
+      ) : outside.length === 0 ? (
+        <p className="text-sm text-muted-foreground">All your friends are already here.</p>
+      ) : (
+        <ul className="grid gap-1.5">
+          {outside.map((f) => (
+            <li key={f.id} className="flex items-center gap-3 rounded-lg border border-dashed px-3 py-2" data-testid="invite-friend">
+              <Avatar color={colorFor(f.id)}>{initials(f.name)}</Avatar>
+              <span className="min-w-0 flex-1 truncate text-sm">{f.name}</span>
+              <Button size="sm" variant="outline" disabled={busy === f.id} onClick={() => invite(f)} aria-label={`Add ${f.name} to this room`}>
+                <UserPlus /> Add
+              </Button>
+            </li>
+          ))}
+        </ul>
+      )}
+    </section>
+  );
 }
 
 export function PeoplePanel({ room, selfId, provider, getToken, onChanged, onLeft }: Props) {
@@ -148,6 +209,8 @@ export function PeoplePanel({ room, selfId, provider, getToken, onChanged, onLef
           );
         })}
       </ul>
+
+      {room.myRole !== "VIEWER" && <InviteFriends room={room} getToken={getToken} onAdded={onChanged} />}
 
       {!isOwner && (
         <Button variant="outline" className="mt-auto" onClick={() => remove(selfId, "you")} disabled={busy === selfId} data-testid="leave-room">

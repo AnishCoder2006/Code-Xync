@@ -37,6 +37,10 @@ export interface SnapshotOptions {
   /** BullMQ timestamps for the Phase 6 B2 timing record (ms since epoch). */
   enqueuedAt?: number;
   pickedAt?: number;
+  /** Program input (test case). Runs in a fresh container with stdin attached. */
+  stdin?: string;
+  /** Don't wait for the terminal's ready signal (no one is watching live: test-case batches). */
+  skipReady?: boolean;
 }
 
 /**
@@ -117,7 +121,7 @@ export const runInDocker = async (
 
   try {
     // Only wait for ready signal on interactive jobs (skip for snapshot / AI jobs)
-    if (!isSnapshot) {
+    if (!isSnapshot && !snapshotOptions?.skipReady) {
       // BLPOP on a DEDICATED short-lived connection. `redis` here is the worker's
       // BullMQ connection; blocking it for up to 5 s delayed BullMQ's lock renewal
       // (lockDuration 10 s), so jobs were marked stalled, re-run while still running,
@@ -154,14 +158,18 @@ export const runInDocker = async (
 
     const image = spec.image;
 
+    // Program input: the warm pool already uses stdin to hand over the program, so a run
+    // with input always takes a fresh container with stdin attached (-i).
+    const stdin = isSnapshot ? undefined : snapshotOptions?.stdin;
+
     // Docker run flags constructed from SANDBOX_LIMITS (hardening.ts: shared with the warm pool)
-    const dockerArgs = ["run", "--name", containerName, "--rm", ...hardeningArgs()];
+    const dockerArgs = ["run", ...(stdin !== undefined ? ["-i"] : []), "--name", containerName, "--rm", ...hardeningArgs()];
 
     // B7: interactive single-file node/python jobs may take a pre-started, single-use
     // container from the warm pool (same hardening flags); the program is piped over stdin.
     // Snapshot (AI test) and bash jobs always use a fresh container.
     const warm =
-      !isSnapshot && (image === "codesync-sandbox-python" || image === "codesync-sandbox-node")
+      !isSnapshot && stdin === undefined && (image === "codesync-sandbox-python" || image === "codesync-sandbox-node")
         ? warmPool.claim(image === "codesync-sandbox-python" ? "python" : "javascript")
         : null;
     if (warm) containerName = warm.name;
@@ -201,6 +209,11 @@ export const runInDocker = async (
       runningContainers.add(containerName);
       // Warm: hand the program over once every listener below is attached (same tick).
       if (warm) setImmediate(() => warm.child.stdin?.end(code));
+      else if (stdin !== undefined) {
+        // A program that exits without reading all its input closes the pipe: not an error.
+        child.stdin?.on("error", () => {});
+        child.stdin?.end(stdin);
+      }
       const markFirstOutput = () => {
         if (timing.firstOutputAt === undefined) timing.firstOutputAt = Date.now();
       };

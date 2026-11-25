@@ -1,7 +1,8 @@
 import Link from "next/link";
 import { useRouter } from "next/router";
 import { useCallback, useEffect, useLayoutEffect, useRef, useState, type ReactNode } from "react";
-import { Activity, BarChart3, Gauge, Layers, LayoutGrid, Menu, Server, X, type LucideIcon } from "lucide-react";
+import { Activity, BarChart3, Gauge, Layers, LayoutGrid, Menu, Server, Users, X, type LucideIcon } from "lucide-react";
+import { api, type GetToken } from "../lib/api";
 import { UserMenu, useAppAuth } from "../lib/auth";
 import { cn } from "../lib/utils";
 import { Button } from "./ui/button";
@@ -47,7 +48,40 @@ export function Logo({ className }: { className?: string }) {
   );
 }
 
-type NavItem = { href: string; label: string; icon: LucideIcon; active: boolean };
+type NavItem = { href: string; label: string; icon: LucideIcon; active: boolean; badge?: number };
+
+function NavBadge({ count }: { count?: number }) {
+  if (!count) return null;
+  return (
+    <span
+      className="ml-0.5 inline-flex h-[17px] min-w-[17px] items-center justify-center rounded-full bg-brand px-1 text-[10.5px] font-semibold tabular-nums leading-none text-brand-foreground"
+      aria-label={`${count} pending`}
+      data-testid="nav-badge"
+    >
+      {count > 9 ? "9+" : count}
+    </span>
+  );
+}
+
+/** Pending friend requests for the nav badge; refreshed on every page change and every minute. */
+function useFriendRequestCount(enabled: boolean, getToken: GetToken, path: string) {
+  const [count, setCount] = useState(0);
+  useEffect(() => {
+    if (!enabled) return setCount(0);
+    let live = true;
+    const load = () =>
+      api<{ incoming: number }>(getToken, "/friends/summary")
+        .then((r) => live && setCount(r.incoming))
+        .catch(() => {});
+    load();
+    const t = setInterval(load, 60_000);
+    return () => {
+      live = false;
+      clearInterval(t);
+    };
+  }, [enabled, getToken, path]);
+  return count;
+}
 type Box = { x: number; w: number };
 
 /** Pill navigation: a solid indicator slides to the current page, a soft one follows the pointer. */
@@ -125,6 +159,7 @@ function NavPills({ items }: { items: NavItem[] }) {
           >
             <Icon className={cn("size-[15px] transition-colors duration-300", n.active && "text-brand")} aria-hidden="true" />
             {n.label}
+            <NavBadge count={n.badge} />
           </Link>
         );
       })}
@@ -157,6 +192,7 @@ function MobileMenu({ items, onClose }: { items: NavItem[]; onClose: () => void 
             >
               <Icon className={cn("size-4", n.active && "text-brand")} aria-hidden="true" />
               {n.label}
+              <NavBadge count={n.badge} />
               {n.active && <span className="ml-auto size-1.5 rounded-full bg-brand" aria-hidden="true" />}
             </Link>
           );
@@ -180,9 +216,10 @@ function Backdrop() {
 }
 
 export function AppShell({ children }: { children: ReactNode }) {
-  const { isLoaded, isSignedIn } = useAppAuth();
+  const { isLoaded, isSignedIn, getToken } = useAppAuth();
   const router = useRouter();
   const path = router.pathname;
+  const friendRequests = useFriendRequestCount(!!isSignedIn, getToken, path);
   const [scrolled, setScrolled] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
   const closeMenu = useCallback(() => setMenuOpen(false), []);
@@ -192,6 +229,7 @@ export function AppShell({ children }: { children: ReactNode }) {
     { href: "/#how", label: "How it works", icon: Layers, active: false, show: "out" },
     { href: "/#spec", label: "Spec sheet", icon: Gauge, active: false, show: "out" },
     { href: "/rooms", label: "Rooms", icon: LayoutGrid, active: path.startsWith("/rooms") || path.startsWith("/room/"), show: "in" },
+    { href: "/friends", label: "Friends", icon: Users, active: path.startsWith("/friends"), show: "in", badge: friendRequests },
     { href: "/activity", label: "Activity", icon: Activity, active: path === "/activity", show: "in" },
     { href: "/system", label: "System", icon: Server, active: path === "/system", show: "in" },
     { href: "/benchmarks", label: "Benchmarks", icon: BarChart3, active: path === "/benchmarks", show: "all" },

@@ -131,6 +131,21 @@ export type FixRecord = { id: string; prompt: string; status: string; attempts: 
 export type RoomHistory = { runs: RunRecord[]; aiFixes: FixRecord[] };
 export type Activity = { summary: { runs7d: number; aiFixes7d: number; accepted7d: number }; runs: RunRecord[]; aiFixes: FixRecord[] };
 
+export type FriendPerson = { id: string; name: string };
+export type Friend = FriendPerson & { since: string; sharedRooms: number; lastRunAt: string | null };
+export type FriendsData = {
+  me: { id: string; friendCode: string };
+  friends: Friend[];
+  incoming: { id: string; user: FriendPerson; sharedRooms: number; createdAt: string }[];
+  outgoing: { id: string; user: FriendPerson; createdAt: string }[];
+  suggestions: (FriendPerson & { sharedRooms: number })[];
+};
+export type FriendLinkPreview = { user: FriendPerson; status: "self" | "friends" | "pending" | "none" };
+
+/** The shareable link for a friend code, on whatever host the app is served from. */
+export const friendLink = (code: string) =>
+  `${typeof window !== "undefined" ? window.location.origin : ""}/friends/add/${encodeURIComponent(code)}`;
+
 export type SyncNode = {
   nodeId: string; ok: boolean; latencyMs: number; error?: string;
   rooms: number | null; clients: number | null; uptimeMs: number | null; redis: string | null;

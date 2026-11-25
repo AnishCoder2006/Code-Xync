@@ -5,6 +5,7 @@ import { WebsocketProvider } from "y-websocket";
 import { MonacoBinding } from "y-monaco";
 import { SYNC_URL } from "../lib/api";
 import { MONACO_THEME, defineMonacoThemes } from "../lib/monacoTheme";
+import { CUSTOM_FORMAT_IDS, formatCode, textEdits } from "../lib/format";
 
 // Load Monaco's AMD build from this app (public/monaco/vs, copied by
 // scripts/copy-monaco.js) rather than a CDN. y-monaco shares this instance through
@@ -15,8 +16,38 @@ if (typeof window !== "undefined") {
 
 export type ConnState = "connecting" | "connected" | "reconnecting" | "offline";
 export type PresenceUser = { id: string; name: string; color: string };
+export type FormatResult = "formatted" | "unchanged" | "unsupported";
 /** Handed to the page once the editor is ready (and again when it binds). */
-export type EditorHelpers = { getCode: () => string; reveal: (startLine: number, endLine: number) => void };
+export type EditorHelpers = {
+  getCode: () => string;
+  reveal: (startLine: number, endLine: number) => void;
+  /** Formats the whole file (same as Shift+Alt+F); one undo step, synced to everyone. */
+  format: () => Promise<FormatResult>;
+};
+
+/**
+ * Monaco formats JavaScript and TypeScript itself; every other room language gets
+ * lib/format.ts as its document formatter, so the Format button, the context menu's
+ * "Format Document" and Shift+Alt+F all behave the same. Registered once per page.
+ */
+let formattersRegistered = false;
+function registerFormatters(monaco: any) {
+  if (formattersRegistered) return;
+  formattersRegistered = true;
+  for (const id of CUSTOM_FORMAT_IDS) {
+    monaco.languages.registerDocumentFormattingEditProvider(id, {
+      displayName: "codexync",
+      provideDocumentFormattingEdits(model: any) {
+        const before = model.getValue();
+        return textEdits(before, formatCode(before, id)).map((e) => {
+          const s = model.getPositionAt(e.start);
+          const en = model.getPositionAt(e.end);
+          return { range: new monaco.Range(s.lineNumber, s.column, en.lineNumber, en.column), text: e.text };
+        });
+      },
+    });
+  }
+}
 
 interface EditorProps {
   roomId: string;
@@ -75,6 +106,15 @@ export function Editor({
   const userRef = useRef(user);
   userRef.current = user;
 
+  const format = useCallback(async (): Promise<FormatResult> => {
+    const ed = editorRef.current;
+    const action = ed?.getAction("editor.action.formatDocument");
+    if (!ed || !action || !action.isSupported()) return "unsupported";
+    const before = ed.getValue();
+    await action.run();
+    return ed.getValue() === before ? "unchanged" : "formatted";
+  }, []);
+
   const bindEditor = useCallback(
     (editor: any) => {
       const provider = providerRef.current;
@@ -95,13 +135,13 @@ export function Editor({
           editor.setSelection({ startLineNumber: startLine, startColumn: 1, endLineNumber: end, endColumn: model.getLineMaxColumn(end) });
           editor.focus();
         };
-        onReady?.(Object.assign(getCode, { getCode, reveal }) as any);
+        onReady?.(Object.assign(getCode, { getCode, reveal, format }) as any);
       };
       // Bind only after the first sync: binding earlier loses the first edit / jumps the cursor.
       if (provider.synced) bind();
       else provider.once("sync", (isSynced: boolean) => isSynced && bind());
     },
-    [onReady]
+    [onReady, format]
   );
 
   // Yjs doc + WebSocket provider; one per room.
@@ -164,7 +204,7 @@ export function Editor({
       report();
 
       const getCode = () => (editorRef.current ? editorRef.current.getValue() : ydoc.getText("content").toString());
-      onReady?.(Object.assign(getCode, { getCode, reveal: () => {} }) as any);
+      onReady?.(Object.assign(getCode, { getCode, reveal: () => {}, format }) as any);
 
       if (pendingMountRef.current) {
         const ed = pendingMountRef.current;
@@ -199,8 +239,9 @@ export function Editor({
   }, [user?.id, user?.name, user?.color]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const handleEditorMount = useCallback(
-    (editor: any) => {
+    (editor: any, monaco: any) => {
       editorRef.current = editor;
+      registerFormatters(monaco);
       bindEditor(editor);
     },
     [bindEditor]

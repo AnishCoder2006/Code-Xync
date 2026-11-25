@@ -120,99 +120,164 @@ router.post("/sandbox", verifyInternalAuth, sandboxRateLimiter, async (req: Requ
 
 router.use(authenticate);
 
+const MAX_STDIN_BYTES = 64 * 1024; // program input per run
+const MAX_BATCH_CASES = 10;
+
+type RunRequest = { roomId: string; code: string; language: string };
+type Rejection = { status: number; error: string };
+
+/**
+ * Checks shared by single runs and test-case batches: fields, language, code size,
+ * OWNER/EDITOR membership (viewers get 403) and room in the queue for `jobs` more jobs.
+ */
+async function checkRun(req: Request, jobs: number): Promise<Rejection | RunRequest> {
+  const { roomId, code, language } = req.body ?? {};
+  if (!roomId || !code || !language) return { status: 400, error: "Missing required fields: roomId, code, language" };
+  if (!isRunnable(language) && language !== "sh") return { status: 400, error: `Running ${language} code is not supported yet.` };
+  if (!req.user) return { status: 401, error: "Unauthorized" };
+
+  const codeSizeBytes = Buffer.byteLength(code, "utf8");
+  if (codeSizeBytes > MAX_CODE_SIZE_BYTES) {
+    return { status: 413, error: `Payload too large. Code size (${codeSizeBytes} bytes) exceeds limit of ${MAX_CODE_SIZE_BYTES} bytes.` };
+  }
+
+  const membership = await prisma.roomMember.findUnique({ where: { roomId_userId: { roomId, userId: req.user.id } } });
+  if (!membership || (membership.role !== "OWNER" && membership.role !== "EDITOR")) {
+    logger.warn({ userId: req.user.id, roomId, role: membership?.role }, "Non-editor/viewer attempted execution");
+    return { status: 403, error: "Forbidden: Viewer cannot execute code" };
+  }
+
+  const jobCounts = await executionQueue.getJobCounts("waiting", "active", "delayed");
+  const totalInFlight = jobCounts.waiting + jobCounts.active + jobCounts.delayed;
+  if (totalInFlight + jobs > MAX_QUEUE_LENGTH) {
+    logger.warn({ totalInFlight, jobs, max: MAX_QUEUE_LENGTH }, "Execution queue saturated");
+    return { status: 503, error: "busy, retry shortly" };
+  }
+  return { roomId, code, language };
+}
+
+const stdinError = (stdin: unknown): string | null => {
+  if (stdin === undefined || stdin === null) return null;
+  if (typeof stdin !== "string") return "stdin must be a string";
+  if (Buffer.byteLength(stdin, "utf8") > MAX_STDIN_BYTES) return `Input is too large (limit ${MAX_STDIN_BYTES / 1024} KB).`;
+  return null;
+};
+
+/**
+ * Audit log row ('queued') first, then the job. `stdin` is piped to the program;
+ * `batch` jobs have no live terminal, so the worker doesn't wait for a ready signal.
+ */
+async function enqueueRun(run: RunRequest, userId: string, opts: { stdin?: string; batch?: boolean } = {}): Promise<string> {
+  const jobId = uuidv4();
+  await prisma.executionLog.create({ data: { roomId: run.roomId, userId, jobId, status: "queued" } });
+  try {
+    await executionQueue.add(
+      "run",
+      { ...run, userId, ...(opts.stdin ? { stdin: opts.stdin } : {}), ...(opts.batch ? { batch: true } : {}) },
+      {
+        jobId,
+        attempts: 2,
+        backoff: { type: "exponential", delay: 1000 },
+        removeOnComplete: { age: 3600, count: 1000 },
+        removeOnFail: { age: 86400, count: 5000 },
+      }
+    );
+  } catch (enqueueErr) {
+    logger.error({ err: enqueueErr, jobId }, "executionQueue.add failed; updating ExecutionLog status to failed");
+    await prisma.executionLog
+      .updateMany({ where: { jobId }, data: { status: "failed", stderrTrunc: "Failed to enqueue execution job" } })
+      .catch((e) => logger.error({ err: e }, "Failed to update ExecutionLog to failed"));
+    throw enqueueErr;
+  }
+  return jobId;
+}
+
+/** POST /execution  { roomId, code, language, stdin? }  -> { jobId }; output streams to the terminal. */
 router.post("/", executionRateLimiter, async (req: Request, res: Response) => {
   try {
-    const { roomId, code, language } = req.body;
-    if (!roomId || !code || !language) {
-      return res.status(400).json({ error: "Missing required fields: roomId, code, language" });
-    }
-    if (!isRunnable(language) && language !== "sh") {
-      return res.status(400).json({ error: `Running ${language} code is not supported yet.` });
-    }
-
-    if (!req.user) {
-      return res.status(401).json({ error: "Unauthorized" });
-    }
-
-    // 1. Validate max code size (reject > 100 KB with 413)
-    const codeSizeBytes = Buffer.byteLength(code, "utf8");
-    if (codeSizeBytes > MAX_CODE_SIZE_BYTES) {
-      return res.status(413).json({
-        error: `Payload too large. Code size (${codeSizeBytes} bytes) exceeds limit of ${MAX_CODE_SIZE_BYTES} bytes.`,
-      });
-    }
-
-    // 2. Verify RoomMember role is OWNER or EDITOR (viewers get 403)
-    const membership = await prisma.roomMember.findUnique({
-      where: {
-        roomId_userId: {
-          roomId,
-          userId: req.user.id,
-        },
-      },
-    });
-
-    if (!membership || (membership.role !== "OWNER" && membership.role !== "EDITOR")) {
-      logger.warn({ userId: req.user.id, roomId, role: membership?.role }, "Non-editor/viewer attempted execution");
-      return res.status(403).json({ error: "Forbidden: Viewer cannot execute code" });
-    }
-
-    // 3. Check queue backlog / capacity (return 503 if queue is full)
-    const jobCounts = await executionQueue.getJobCounts("waiting", "active", "delayed");
-    const totalInFlight = jobCounts.waiting + jobCounts.active + jobCounts.delayed;
-    if (totalInFlight >= MAX_QUEUE_LENGTH) {
-      logger.warn({ totalInFlight, max: MAX_QUEUE_LENGTH }, "Execution queue saturated");
-      return res.status(503).json({ error: "busy, retry shortly" });
-    }
-
-    const jobId = uuidv4();
-
-    // 4. Initial audit log with status 'queued' BEFORE executionQueue.add
-    await prisma.executionLog.create({
-      data: {
-        roomId,
-        userId: req.user.id,
-        jobId,
-        status: "queued",
-      },
-    });
-
-    // 5. Enqueue execution job with retry attempts and backoff
+    const badStdin = stdinError(req.body?.stdin);
+    if (badStdin) return res.status(badStdin.includes("too large") ? 413 : 400).json({ error: badStdin });
+    const run = await checkRun(req, 1);
+    if ("error" in run) return res.status(run.status).json({ error: run.error });
     try {
-      await executionQueue.add(
-        "run",
-        { roomId, code, language, userId: req.user.id },
-        {
-          jobId,
-          attempts: 2,
-          backoff: {
-            type: "exponential",
-            delay: 1000,
-          },
-          removeOnComplete: {
-            age: 3600,
-            count: 1000,
-          },
-          removeOnFail: {
-            age: 86400,
-            count: 5000,
-          },
-        }
-      );
-    } catch (enqueueErr) {
-      logger.error({ err: enqueueErr, jobId }, "executionQueue.add failed; updating ExecutionLog status to failed");
-      await prisma.executionLog
-        .updateMany({
-          where: { jobId },
-          data: { status: "failed", stderrTrunc: "Failed to enqueue execution job" },
-        })
-        .catch((e) => logger.error({ err: e }, "Failed to update ExecutionLog to failed"));
-      return res.status(500).json({ error: "Failed to enqueue execution job" });
+      const jobId = await enqueueRun(run, req.user!.id, { stdin: req.body.stdin || undefined });
+      res.json({ jobId });
+    } catch {
+      res.status(500).json({ error: "Failed to enqueue execution job" });
     }
-
-    res.json({ jobId });
   } catch (err) {
     logger.error({ err }, "Failed to enqueue execution job");
+    res.status(500).json({ error: "Internal server error" });
+  }
+});
+
+/**
+ * POST /execution/batch  { roomId, code, language, cases: [{ stdin }] }  -> { jobIds }
+ * Runs the same program once per test case (up to 10). Counts as ONE run for the rate
+ * limit. Poll GET /execution/:jobId/result for each case's output.
+ */
+router.post("/batch", executionRateLimiter, async (req: Request, res: Response) => {
+  try {
+    const cases = req.body?.cases;
+    if (!Array.isArray(cases) || cases.length === 0) return res.status(400).json({ error: "cases must be a non-empty array" });
+    if (cases.length > MAX_BATCH_CASES) return res.status(400).json({ error: `At most ${MAX_BATCH_CASES} test cases per run.` });
+    for (const c of cases) {
+      const bad = stdinError(c?.stdin);
+      if (bad) return res.status(bad.includes("too large") ? 413 : 400).json({ error: bad });
+    }
+    const run = await checkRun(req, cases.length);
+    if ("error" in run) return res.status(run.status).json({ error: run.error });
+    try {
+      const jobIds: string[] = [];
+      for (const c of cases) jobIds.push(await enqueueRun(run, req.user!.id, { stdin: c?.stdin || undefined, batch: true }));
+      res.json({ jobIds });
+    } catch {
+      res.status(500).json({ error: "Failed to enqueue execution job" });
+    }
+  } catch (err) {
+    logger.error({ err }, "Failed to enqueue execution batch");
+    res.status(500).json({ error: "Internal server error" });
+  }
+});
+
+/**
+ * GET /execution/:jobId/result  -> { done, status, exitCode, stdout, stderr, runTimeMs }
+ * Any member of the job's room may read it. The worker's Redis result (kept 5 min) has
+ * the exit code; after that the audit log still has status and output (10 KB each).
+ */
+router.get("/:jobId/result", async (req: Request, res: Response) => {
+  try {
+    const log = await prisma.executionLog.findUnique({
+      where: { jobId: req.params.jobId },
+      select: { roomId: true, status: true, stdoutTrunc: true, stderrTrunc: true, runTimeMs: true },
+    });
+    if (!log) return res.status(404).json({ error: "Run not found" });
+    const member = await prisma.roomMember.findUnique({ where: { roomId_userId: { roomId: log.roomId, userId: req.user!.id } } });
+    if (!member) return res.status(404).json({ error: "Run not found" });
+
+    const raw = await redisConnection.get(`execution:result:${req.params.jobId}`);
+    if (raw) {
+      const r = JSON.parse(raw);
+      return res.json({
+        done: true,
+        status: r.status,
+        exitCode: r.exitCode ?? r.code ?? null,
+        stdout: r.stdoutTrunc ?? r.stdout ?? "",
+        stderr: r.stderrTrunc ?? r.stderr ?? "",
+        runTimeMs: r.runTimeMs ?? null,
+      });
+    }
+    const done = log.status !== "queued" && log.status !== "running";
+    res.json({
+      done,
+      status: log.status,
+      exitCode: log.status === "passed" ? 0 : null,
+      stdout: log.stdoutTrunc ?? "",
+      stderr: log.stderrTrunc ?? "",
+      runTimeMs: log.runTimeMs,
+    });
+  } catch (err) {
+    logger.error({ err }, "Failed to read execution result");
     res.status(500).json({ error: "Internal server error" });
   }
 });

@@ -17,7 +17,7 @@ const activeContainers = new Set<string>();
 const worker = new Worker(
   "code_execution",
   async (job: Job) => {
-    const { code, language, roomId, files, command, isSnapshot } = job.data;
+    const { code, language, roomId, files, command, isSnapshot, stdin, batch } = job.data;
     const jobId = job.id as string;
     const containerName = `codesync-job-${jobId}`;
     activeContainers.add(containerName);
@@ -31,7 +31,16 @@ const worker = new Worker(
         code || "",
         language,
         redisConnection,
-        { files, command, isSnapshot: isSnapshot || !!files, enqueuedAt: job.timestamp, pickedAt: job.processedOn }
+        {
+          files,
+          command,
+          isSnapshot: isSnapshot || !!files,
+          enqueuedAt: job.timestamp,
+          pickedAt: job.processedOn,
+          stdin: typeof stdin === "string" && stdin.length > 0 ? stdin : undefined,
+          // Test-case batches have no terminal listening, so don't wait for its ready signal.
+          skipReady: !!batch,
+        }
       );
       return result;
     } finally {

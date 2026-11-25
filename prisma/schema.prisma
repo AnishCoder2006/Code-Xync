@@ -26,9 +26,33 @@ model User {
   name        String?
   role        UserRole     @default(DEV)
   createdAt   DateTime     @default(now())
+  /// Personal invite code for /friends/add/<code>; created the first time it is needed.
+  friendCode  String?      @unique
   memberships RoomMember[]
   executions  ExecutionLog[]
   aiRequests  AIInteraction[]
+  friendRequestsSent     Friendship[] @relation("FriendRequester")
+  friendRequestsReceived Friendship[] @relation("FriendAddressee")
+}
+
+enum FriendshipStatus {
+  PENDING
+  ACCEPTED
+}
+
+/// One row per pair of users, whichever side asked first (the API checks both directions).
+model Friendship {
+  id          String           @id @default(cuid())
+  requesterId String
+  addresseeId String
+  status      FriendshipStatus @default(PENDING)
+  createdAt   DateTime         @default(now())
+  acceptedAt  DateTime?
+  requester   User             @relation("FriendRequester", fields: [requesterId], references: [id], onDelete: Cascade)
+  addressee   User             @relation("FriendAddressee", fields: [addresseeId], references: [id], onDelete: Cascade)
+
+  @@unique([requesterId, addresseeId])
+  @@index([addresseeId, status])
 }
 
 model Room {

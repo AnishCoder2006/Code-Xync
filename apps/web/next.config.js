@@ -8,6 +8,9 @@ const E2E_BUILD = process.env.NEXT_PUBLIC_E2E === "1";
 /** @type {import('next').NextConfig} */
 module.exports = {
   reactStrictMode: true,
+  // Next 15's dev badge sits bottom-left, over the room's Output/Tests controls. Build and
+  // runtime errors still open the dev overlay.
+  devIndicators: false,
   pageExtensions: ["page.tsx", "page.ts", ...(E2E_BUILD ? ["e2e.tsx"] : [])],
   // E2E builds use a separate output dir so they never overwrite the production build.
   distDir: process.env.NEXT_DIST_DIR || ".next",

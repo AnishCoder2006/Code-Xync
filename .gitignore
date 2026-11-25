@@ -23,3 +23,6 @@ test-results/
 # Playwright setup pid files
 tests/playwright/.pw-pids
 tests/playwright/.pw-ui-pids
+
+# local dev build dir (NEXT_DIST_DIR=.next-d)
+.next-d/

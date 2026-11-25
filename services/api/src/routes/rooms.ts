@@ -6,6 +6,7 @@ import bcrypt from "bcrypt";
 import { authenticate } from "../middleware/auth";
 import { ROOM_LANGUAGES, isRoomLanguage } from "../lib/languages";
 import { requestReauth } from "../lib/syncControl";
+import { areFriends } from "../lib/friends";
 
 const router = Router();
 
@@ -257,6 +258,34 @@ router.get("/:id/history", requireRoomRole([]), async (req: Request, res: Respon
     });
   } catch (error) {
     logger.error({ err: error }, "Failed to fetch room history");
+    res.status(500).json({ error: "Internal server error" });
+  }
+});
+
+/**
+ * POST /rooms/:id/members  { userId, role?: "EDITOR" | "VIEWER" }
+ * Owners and editors add one of their friends to the room in one click (no link or
+ * passcode needed). Only accepted friends can be added this way.
+ */
+router.post("/:id/members", requireRoomRole(["OWNER", "EDITOR"]), async (req: Request, res: Response) => {
+  try {
+    const roomId = req.params.id;
+    const { userId, role = "EDITOR" } = req.body ?? {};
+    if (typeof userId !== "string" || !userId) return res.status(400).json({ error: "userId is required" });
+    if (role !== "EDITOR" && role !== "VIEWER") return res.status(400).json({ error: "role must be EDITOR or VIEWER" });
+    if (!(await areFriends(prisma, req.user!.id, userId))) {
+      return res.status(403).json({ error: "You can only add people who are your friends" });
+    }
+    const existing = await prisma.roomMember.findUnique({ where: { roomId_userId: { roomId, userId } } });
+    if (existing) return res.status(409).json({ error: "They're already in this room" });
+    const member = await prisma.roomMember.create({
+      data: { roomId, userId, role },
+      select: { userId: true, role: true, joinedAt: true, user: { select: { name: true } } },
+    });
+    logger.info({ roomId, userId, role, by: req.user!.id }, "Friend added to room");
+    res.status(201).json({ userId: member.userId, name: member.user.name, role: member.role, joinedAt: member.joinedAt });
+  } catch (error) {
+    logger.error({ err: error }, "Failed to add friend to room");
     res.status(500).json({ error: "Internal server error" });
   }
 });

@@ -3,7 +3,9 @@ import dynamic from "next/dynamic";
 import { useRouter } from "next/router";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { WebsocketProvider } from "y-websocket";
-import { AlertCircle, ArrowLeft, Eye, History, Play, Search, Settings, Sparkles, TerminalSquare, Users, X } from "lucide-react";
+import { AlertCircle, ArrowLeft, Eye, FlaskConical, History, Play, Search, Settings, Sparkles, TerminalSquare, Users, WandSparkles, X } from "lucide-react";
+import { toast } from "sonner";
+import { TestCasesPanel, useTestCases } from "../../components/TestCases";
 import { ApiError, api, describeError, fileNameFor, languageLabel, roleLabel, type RoomDetail } from "../../lib/api";
 import { useSyncUrlOverride } from "../../lib/auth";
 import { useRequireAuth } from "../../lib/useRequireAuth";
@@ -72,6 +74,10 @@ export default function RoomPage() {
   const [diffHost, setDiffHost] = useState<HTMLDivElement | null>(null);
   const getCodeRef = useRef<() => string>(() => "");
   const revealRef = useRef<EditorHelpers["reveal"]>(() => {});
+  const formatRef = useRef<EditorHelpers["format"]>(async () => "unsupported");
+  const [outputTab, setOutputTab] = useState<"output" | "tests">("output");
+  const [selectedCaseId, setSelectedCaseId] = useState<string | null>(null);
+  const { cases } = useTestCases(provider);
   const retryIn = useCountdown(retryAt);
 
   /** silent: refresh in place (no loading screen, editor stays mounted). */
@@ -104,6 +110,7 @@ export default function RoomPage() {
   const onReady = useCallback((helpers: EditorHelpers) => {
     getCodeRef.current = helpers.getCode;
     revealRef.current = helpers.reveal;
+    formatRef.current = helpers.format;
   }, []);
   const onEnd = useCallback((end: RunEnd) => {
     setRun({ phase: "idle", last: end });
@@ -175,13 +182,18 @@ export default function RoomPage() {
     : null;
   const running = run.phase !== "idle";
 
+  // Run uses the selected test case's input, if the room has test cases.
+  const runCase = cases.find((c) => c.id === selectedCaseId) ?? cases[0];
+  const runInput = runCase?.input.trim() ? runCase.input : undefined;
+
   const startRun = async () => {
     if (runBlockedReason || running || retryIn > 0) return;
     setRunError(null);
+    setOutputTab("output");
     setRun({ phase: "starting" });
     try {
       const { jobId: id } = await api<{ jobId: string }>(getToken, "/execution", {
-        body: { roomId, code: getCodeRef.current(), language: room.language },
+        body: { roomId, code: getCodeRef.current(), language: room.language, ...(runInput ? { stdin: runInput } : {}) },
       });
       setJobId(id);
       setRun({ phase: "running", jobId: id });
@@ -217,6 +229,20 @@ export default function RoomPage() {
       <Sparkles /> AI fix
     </Button>
   );
+  const formatCode = async () => {
+    const r = await formatRef.current();
+    if (r === "formatted") toast.success("Code formatted", { description: "Ctrl+Z undoes it. Shortcut: Shift+Alt+F." });
+    else if (r === "unchanged") toast("Already neatly formatted");
+    else toast.error(`Formatting isn't available for ${lang.label} yet.`);
+  };
+  const formatButton = (
+    <Hint label={isViewer ? VIEWER_REASON : "Tidy indentation and spacing (Shift+Alt+F)"} wrap={isViewer}>
+      <Button size="sm" variant="outline" onClick={formatCode} disabled={isViewer} data-testid="format-button">
+        <WandSparkles /> <span className="max-sm:sr-only">Format</span>
+      </Button>
+    </Hint>
+  );
+
   const toolButtons = (
     <div className="inline-flex rounded-md border bg-muted/40 p-0.5" role="group" aria-label="Room tools">
       {PANELS.filter((p) => p.id !== "ai").map(({ id, label, icon: Icon }) => (
@@ -253,6 +279,7 @@ export default function RoomPage() {
           <ConnectionPill state={conn} />
           <Separator orientation="vertical" className="mx-1 h-6" />
           {toolButtons}
+          {formatButton}
           <CopyInvite roomId={roomId} />
           {aiBlockedReason ? <Hint label={aiBlockedReason} wrap>{aiButton}</Hint> : aiButton}
           {runBlockedReason ? <Hint label={runBlockedReason} wrap>{runButton}</Hint> : <Hint label={`Run ${fileNameFor(room.language)} in the sandbox`}>{runButton}</Hint>}
@@ -267,9 +294,9 @@ export default function RoomPage() {
 
       <div
         className={cn(
-          "grid min-h-0 flex-1 grid-cols-[minmax(0,1fr)] grid-rows-[minmax(0,1fr)_240px] [grid-template-areas:'editor'_'output']",
+          "grid min-h-0 flex-1 grid-cols-[minmax(0,1fr)] grid-rows-[minmax(0,1fr)_280px] [grid-template-areas:'editor'_'output']",
           panel && "lg:grid-cols-[minmax(0,1fr)_400px] lg:[grid-template-areas:'editor_aside'_'output_aside']",
-          "max-lg:grid-rows-[60vh_auto_260px] max-lg:[grid-template-areas:'editor'_'aside'_'output']"
+          "max-lg:grid-rows-[60vh_auto_340px] max-lg:[grid-template-areas:'editor'_'aside'_'output']"
         )}
       >
         <div className="relative min-h-0 bg-card [grid-area:editor]" ref={setDiffHost} data-testid="editor-area">
@@ -350,8 +377,33 @@ export default function RoomPage() {
 
         <section className="flex min-h-0 flex-col border-t bg-card [grid-area:output]" aria-label="Run output">
           <div className="flex flex-wrap items-center gap-3 border-b px-3 py-1.5 text-[13px]">
-            <span className="inline-flex items-center gap-1.5 font-medium"><TerminalSquare className="size-4 text-muted-foreground" />Output</span>
+            <div className="inline-flex rounded-md border bg-muted/40 p-0.5" role="tablist" aria-label="Output and tests">
+              {([
+                { id: "output", label: "Output", icon: TerminalSquare },
+                { id: "tests", label: cases.length ? `Tests (${cases.length})` : "Tests", icon: FlaskConical },
+              ] as const).map(({ id, label, icon: Icon }) => (
+                <button
+                  key={id}
+                  role="tab"
+                  aria-selected={outputTab === id}
+                  onClick={() => setOutputTab(id)}
+                  className={cn(
+                    "inline-flex items-center gap-1.5 rounded px-2 py-0.5 font-medium transition-colors",
+                    outputTab === id ? "bg-card text-foreground shadow-sm" : "text-muted-foreground hover:text-foreground"
+                  )}
+                  data-testid={`output-tab-${id}`}
+                >
+                  <Icon className="size-4" />{label}
+                </button>
+              ))}
+            </div>
+            {runInput && outputTab === "output" && (
+              <span className="inline-flex items-center gap-1 rounded border bg-muted/40 px-1.5 py-0.5 text-xs text-muted-foreground" data-testid="run-input-chip">
+                Input: {runCase!.name}
+              </span>
+            )}
             <span
+              hidden={outputTab !== "output"}
               data-testid="run-status"
               className={cn(
                 "text-muted-foreground",
@@ -377,7 +429,25 @@ export default function RoomPage() {
               </span>
             )}
           </div>
-          <Terminal roomId={roomId} jobId={jobId} getToken={getToken} syncUrl={syncOverride} theme={scheme} onEnd={onEnd} />
+          {/* The terminal stays mounted on the Tests tab so a running job keeps streaming. */}
+          <div className={cn("flex min-h-0 flex-1 flex-col", outputTab !== "output" && "hidden")}>
+            <Terminal roomId={roomId} jobId={jobId} getToken={getToken} syncUrl={syncOverride} theme={scheme} onEnd={onEnd} />
+          </div>
+          {outputTab === "tests" && (
+            <TestCasesPanel
+              provider={provider}
+              roomId={roomId}
+              language={room.language}
+              getCode={() => getCodeRef.current()}
+              getToken={getToken}
+              readOnly={isViewer}
+              runBlockedReason={runBlockedReason ?? (retryIn > 0 ? `Rate limit reached. Try again in ${retryIn} s.` : null)}
+              selectedId={selectedCaseId}
+              onSelect={setSelectedCaseId}
+              onRunOne={startRun}
+              onRateLimited={(s) => setRetryAt(Date.now() + s * 1000)}
+            />
+          )}
         </section>
       </div>
     </div>
