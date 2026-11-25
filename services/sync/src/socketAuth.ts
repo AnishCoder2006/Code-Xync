@@ -1,12 +1,7 @@
-import { createClerkClient } from "@clerk/backend";
+import { verifyToken } from "@clerk/backend";
 import { prisma } from "./lib/prisma";
 import type { IncomingMessage } from "http";
 import * as urlModule from "url";
-
-const clerk = createClerkClient({
-  secretKey: process.env.CLERK_SECRET_KEY,
-  publishableKey: process.env.CLERK_PUBLISHABLE_KEY,
-});
 
 export const authenticateSocket = async (
   req: IncomingMessage
@@ -25,16 +20,12 @@ export const authenticateSocket = async (
     if (process.env.NODE_ENV === "test" && token.startsWith("test-token-")) {
       userId = token.replace("test-token-", "");
     } else {
-      // authenticateRequest is the correct Clerk v5 API for verifying a session JWT
-      const requestState = await clerk.authenticateRequest(
-        new Request(`https://placeholder.local/?__session=${encodeURIComponent(token)}`),
-        { secretKey: process.env.CLERK_SECRET_KEY }
-      );
-
-      if (!requestState.isSignedIn || !requestState.toAuth().userId) {
-        throw new Error("Invalid token");
-      }
-      userId = requestState.toAuth().userId!;
+      // Browsers cannot set headers on a WebSocket, so the session JWT arrives as ?token=.
+      // Verify it directly: authenticateRequest() only reads cookies / the Authorization
+      // header and, in development, rejects header-less requests (dev-browser-missing).
+      const payload = await verifyToken(token, { secretKey: process.env.CLERK_SECRET_KEY });
+      if (!payload.sub) throw new Error("Invalid token");
+      userId = payload.sub;
     }
 
     const member = await prisma.roomMember.findUnique({
@@ -52,6 +43,7 @@ export const authenticateSocket = async (
 
     return { userId, roomId, role: member.role };
   } catch (err) {
+    console.warn(`[sync] socket auth rejected: ${(err as Error).message}`);
     throw new Error("Authentication failed");
   }
 };
